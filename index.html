@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Logístico - Santa Cruz</title>
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3cY0qH1Y1N8+7K0W9q5X0dK6XK6M="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    #app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+    }
+
+    .leaflet-popup-content {
+      margin: 14px;
+    }
+
+    .branch-marker {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 3px solid white;
+      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+    }
+
+    .branch-marker-inner {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 6px;
+      left: 6px;
+    }
+
+    .search-result:hover {
+      background: #f1f5f9;
+    }
+
+    .scroll-panel {
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+    }
+
+    .scroll-panel::-webkit-scrollbar {
+      width: 7px;
+    }
+
+    .scroll-panel::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    .scroll-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    @media (max-width: 1023px) {
+      body {
+        overflow: auto;
+      }
+
+      #app {
+        height: auto;
+        min-height: 100vh;
+      }
+
+      #map {
+        height: 65vh;
+        min-height: 430px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #map {
+        height: 58vh;
+        min-height: 380px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- =========================================================
+       HEADER
+  ========================================================== -->
+  <header class="bg-white border-b border-slate-200 shadow-sm z-30">
+    <div class="max-w-[1800px] mx-auto px-4 py-3">
+
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold text-slate-800">
+            Mapa Logístico
+          </h1>
+
+          <p class="text-sm text-slate-500">
+            Santa Cruz de la Sierra · Gestión de sucursales
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+
+          <!-- Estado conexión -->
+          <div
+            id="connectionStatus"
+            class="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg bg-slate-100 text-slate-600"
+          >
+            <span
+              id="connectionDot"
+              class="w-2.5 h-2.5 rounded-full bg-slate-400"
+            ></span>
+
+            <span id="connectionText">
+              Conectando...
+            </span>
+          </div>
+
+          <button
+            id="refreshBtn"
+            type="button"
+            class="px-3 py-2 rounded-lg bg-slate-800 text-white text-sm hover:bg-slate-700 transition"
+          >
+            Actualizar
+          </button>
+
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+
+  <!-- =========================================================
+       MAIN
+  ========================================================== -->
+  <main class="flex-1 min-h-0">
+
+    <div class="max-w-[1800px] mx-auto h-full grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
+
+      <!-- =====================================================
+           PANEL LATERAL
+      ====================================================== -->
+      <aside
+        class="bg-white border-r border-slate-200 flex flex-col min-h-0"
+      >
+
+        <!-- PANEL SCROLLABLE -->
+        <div class="scroll-panel flex-1 p-4 space-y-5">
+
+          <!-- =================================================
+               BUSCADOR
+          ================================================== -->
+          <section>
+
+            <label
+              for="branchSearch"
+              class="block text-sm font-semibold text-slate-700 mb-2"
+            >
+              Buscar sucursal
+            </label>
+
+            <div class="relative">
+
+              <input
+                id="branchSearch"
+                type="search"
+                autocomplete="off"
+                placeholder="Nombre o código..."
+                class="w-full border border-slate-300 rounded-xl px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+
+              <button
+                id="clearSearchBtn"
+                type="button"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                aria-label="Limpiar búsqueda"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <!-- Sugerencias -->
+            <div
+              id="searchResults"
+              class="hidden mt-2 border border-slate-200 rounded-xl bg-white shadow-lg max-h-60 overflow-y-auto"
+            ></div>
+
+            <p class="text-xs text-slate-400 mt-2">
+              Escribe el nombre o código para localizar una sucursal.
+            </p>
+
+          </section>
+
+
+          <!-- =================================================
+               FILTRO DE NEGOCIO
+          ================================================== -->
+          <section>
+
+            <label
+              for="businessFilter"
+              class="block text-sm font-semibold text-slate-700 mb-2"
+            >
+              Negocio
+            </label>
+
+            <select
+              id="businessFilter"
+              class="w-full border border-slate-300 rounded-xl px-3 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Todos">Todos</option>
+              <option value="Farmacorp">Farmacorp</option>
+              <option value="Amarket">Amarket</option>
+              <option value="Dr. Osvaldo">Dr. Osvaldo</option>
+              <option value="Pizza Hut">Pizza Hut</option>
+            </select>
+
+          </section>
+
+
+          <!-- =================================================
+               RESUMEN
+          ================================================== -->
+          <section class="grid grid-cols-2 gap-3">
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <p class="text-xs text-slate-500">
+                Sucursales
+              </p>
+
+              <p
+                id="branchCount"
+                class="text-2xl font-bold text-slate-800"
+              >
+                0
+              </p>
+            </div>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <p class="text-xs text-slate-500">
+                Negocios
+              </p>
+
+              <p
+                id="businessCount"
+                class="text-2xl font-bold text-slate-800"
+              >
+                0
+              </p>
+            </div>
+
+          </section>
+
+
+          <!-- =================================================
+               LEYENDA ÚNICA
+          ================================================== -->
+          <section>
+
+            <div class="flex items-center justify-between mb-3">
+
+              <h2 class="text-sm font-bold text-slate-800">
+                Estado operativo
+              </h2>
+
+            </div>
+
+            <div class="space-y-2">
+
+              <div class="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  class="w-4 h-4 rounded-full shrink-0"
+                  style="background:#9333ea"
+                ></span>
+
+                <span>Se mantiene</span>
+              </div>
+
+              <div class="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  class="w-4 h-4 rounded-full shrink-0"
+                  style="background:#16a34a"
+                ></span>
+
+                <span>Se mantiene eventualmente</span>
+              </div>
+
+              <div class="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  class="w-4 h-4 rounded-full shrink-0"
+                  style="background:#2563eb"
+                ></span>
+
+                <span>En observación</span>
+              </div>
+
+              <div class="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  class="w-4 h-4 rounded-full shrink-0"
+                  style="background:#ea580c"
+                ></span>
+
+                <span>Condicionada</span>
+              </div>
+
+              <div class="flex items-center gap-3 text-sm text-slate-600">
+                <span
+                  class="w-4 h-4 rounded-full shrink-0"
+                  style="background:#dc2626"
+                ></span>
+
+                <span>Definitiva eliminación</span>
+              </div>
+
+            </div>
+
+            <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">
+              El color del pin se selecciona manualmente y es independiente
+              del negocio al que pertenece la sucursal.
+            </p>
+
+          </section>
+
+
+          <!-- =================================================
+               FORMULARIO
+          ================================================== -->
+          <section class="border-t border-slate-200 pt-5">
+
+            <div class="flex items-center justify-between mb-4">
+
+              <h2
+                id="formTitle"
+                class="text-sm font-bold text-slate-800"
+              >
+                Nueva sucursal
+              </h2>
+
+              <button
+                id="cancelEditBtn"
+                type="button"
+                class="hidden text-xs text-slate-500 hover:text-slate-800"
+              >
+                Cancelar
+              </button>
+
+            </div>
+
+
+            <form
+              id="branchForm"
+              class="space-y-3"
+            >
+
+              <input
+                id="codigo"
+                type="text"
+                placeholder="Código"
+                required
+                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+              >
+
+              <input
+                id="nombre"
+                type="text"
+                placeholder="Nombre de sucursal"
+                required
+                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+              >
+
+              <select
+                id="negocio"
+                required
+                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white"
+              >
+                <option value="">Seleccionar negocio</option>
+                <option value="Farmacorp">Farmacorp</option>
+                <option value="Amarket">Amarket</option>
+                <option value="Dr. Osvaldo">Dr. Osvaldo</option>
+                <option value="Pizza Hut">Pizza Hut</option>
+              </select>
+
+              <textarea
+                id="direccion"
+                rows="2"
+                placeholder="Dirección"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm resize-none"
+              ></textarea>
+
+
+              <div class="grid grid-cols-2 gap-2">
+
+                <input
+                  id="lat"
+                  type="number"
+                  step="any"
+                  placeholder="Latitud"
+                  required
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+                >
+
+                <input
+                  id="lng"
+                  type="number"
+                  step="any"
+                  placeholder="Longitud"
+                  required
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+                >
+
+              </div>
+
+
+              <div class="grid grid-cols-2 gap-2">
+
+                <input
+                  id="total_pedidos"
+                  type="number"
+                  min="0"
+                  placeholder="Total pedidos"
+                  value="0"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+                >
+
+                <input
+                  id="pedidos_cancelados"
+                  type="number"
+                  min="0"
+                  placeholder="Cancelados"
+                  value="0"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
+                >
+
+              </div>
+
+
+              <!-- ESTADO OPERATIVO -->
+              <div>
+
+                <label class="block text-xs font-semibold text-slate-600 mb-2">
+                  Estado operativo
+                </label>
+
+                <div
+                  id="statusOptions"
+                  class="space-y-2"
+                >
+
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="statusColor"
+                      value="#9333ea"
+                      checked
+                    >
+
+                    <span class="w-4 h-4 rounded-full" style="background:#9333ea"></span>
+
+                    <span class="text-xs text-slate-600">
+                      Se mantiene
+                    </span>
+                  </label>
+
+
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="statusColor"
+                      value="#16a34a"
+                    >
+
+                    <span class="w-4 h-4 rounded-full" style="background:#16a34a"></span>
+
+                    <span class="text-xs text-slate-600">
+                      Se mantiene eventualmente
+                    </span>
+                  </label>
+
+
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="statusColor"
+                      value="#2563eb"
+                    >
+
+                    <span class="w-4 h-4 rounded-full" style="background:#2563eb"></span>
+
+                    <span class="text-xs text-slate-600">
+                      En observación
+                    </span>
+                  </label>
+
+
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="statusColor"
+                      value="#ea580c"
+                    >
+
+                    <span class="w-4 h-4 rounded-full" style="background:#ea580c"></span>
+
+                    <span class="text-xs text-slate-600">
+                      Condicionada
+                    </span>
+                  </label>
+
+
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="statusColor"
+                      value="#dc2626"
+                    >
+
+                    <span class="w-4 h-4 rounded-full" style="background:#dc2626"></span>
+
+                    <span class="text-xs text-slate-600">
+                      Definitiva eliminación
+                    </span>
+                  </label>
+
+                </div>
+
+              </div>
+
+
+              <button
+                id="saveBtn"
+                type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-3 text-sm transition"
+              >
+                Guardar sucursal
+              </button>
+
+            </form>
+
+          </section>
+
+
+          <!-- =================================================
+               LISTADO
+          ================================================== -->
+          <section class="border-t border-slate-200 pt-5">
+
+            <div class="flex items-center justify-between mb-3">
+
+              <h2 class="text-sm font-bold text-slate-800">
+                Sucursales visibles
+              </h2>
+
+              <span
+                id="visibleCount"
+                class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full"
+              >
+                0
+              </span>
+
+            </div>
+
+            <div
+              id="branchList"
+              class="space-y-2"
+            ></div>
+
+          </section>
+
+        </div>
+
+      </aside>
+
+
+      <!-- =====================================================
+           MAPA
+      ====================================================== -->
+      <section class="relative min-h-0">
+
+        <div id="map"></div>
+
+        <!-- Indicador -->
+        <div
+          class="absolute left-3 top-3 z-[1000] bg-white/95 backdrop-blur rounded-xl shadow-md border border-slate-200 px-3 py-2 text-xs text-slate-600"
+        >
+          Radio de cobertura:
+          <strong>1 km</strong>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+</div>
+
+
+<!-- =========================================================
+     IFRAME OCULTO PARA POST SIN CORS
+========================================================== -->
+<iframe
+  id="hiddenPostFrame"
+  name="hiddenPostFrame"
+  style="display:none"
+></iframe>
+
+
+<script>
+
+  /* ==========================================================
+     CONFIGURACIÓN
+  =========================================================== */
+
+  const API_URL =
+    "https://script.google.com/macros/s/AKfycbz4nNkkW12NPPomEQE5Ns6fjz-nSzQhHHBUKTRB3fZCYDIsjgExttp-7QklO63D6Yh4/exec";
+
+  const STORAGE_KEY = "mapa_logistico_sucursales_v3";
+
+  const MAP_CENTER = [-17.7833, -63.1821];
+
+  const COVERAGE_RADIUS = 1000;
+
+
+  /* ==========================================================
+     NEGOCIOS
+  =========================================================== */
+
+  const BUSINESSES = [
+    "Farmacorp",
+    "Amarket",
+    "Dr. Osvaldo",
+    "Pizza Hut"
+  ];
+
+
+  /* ==========================================================
+     ESTADOS OPERATIVOS
+  =========================================================== */
+
+  const STATUS_CONFIG = {
+
+    "#9333ea": {
+      label: "Se mantiene"
+    },
+
+    "#16a34a": {
+      label: "Se mantiene eventualmente"
+    },
+
+    "#2563eb": {
+      label: "En observación"
+    },
+
+    "#ea580c": {
+      label: "Condicionada (baja demanda pero única en rango geográfico)"
+    },
+
+    "#dc2626": {
+      label: "Definitiva eliminación"
+    }
+
+  };
+
+
+  /* ==========================================================
+     ESTADO GLOBAL
+  =========================================================== */
+
+  let branches = [];
+
+  let filteredBranches = [];
+
+  let editingCode = null;
+
+  let markersLayer;
+
+  let coverageCircle = null;
+
+  let searchTimer = null;
+
+
+  /* ==========================================================
+     MAPA
+  =========================================================== */
+
+  const map = L.map("map", {
+    zoomControl: true,
+    preferCanvas: true
+  }).setView(MAP_CENTER, 12);
+
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }
+  ).addTo(map);
+
+
+  markersLayer = L.layerGroup().addTo(map);
+
+
+  /* ==========================================================
+     ELEMENTOS DOM
+  =========================================================== */
+
+  const branchSearch =
+    document.getElementById("branchSearch");
+
+  const searchResults =
+    document.getElementById("searchResults");
+
+  const clearSearchBtn =
+    document.getElementById("clearSearchBtn");
+
+  const businessFilter =
+    document.getElementById("businessFilter");
+
+  const branchForm =
+    document.getElementById("branchForm");
+
+  const branchList =
+    document.getElementById("branchList");
+
+  const branchCount =
+    document.getElementById("branchCount");
+
+  const businessCount =
+    document.getElementById("businessCount");
+
+  const visibleCount =
+    document.getElementById("visibleCount");
+
+  const connectionText =
+    document.getElementById("connectionText");
+
+  const connectionDot =
+    document.getElementById("connectionDot");
+
+  const connectionStatus =
+    document.getElementById("connectionStatus");
+
+  const refreshBtn =
+    document.getElementById("refreshBtn");
+
+  const formTitle =
+    document.getElementById("formTitle");
+
+  const cancelEditBtn =
+    document.getElementById("cancelEditBtn");
+
+  const saveBtn =
+    document.getElementById("saveBtn");
+
+
+  /* ==========================================================
+     UTILIDADES
+  =========================================================== */
+
+  function escapeHTML(value) {
+
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  }
+
+
+  function normalizeText(value) {
+
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  }
+
+
+  function toNumber(value, fallback = 0) {
+
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+        .trim()
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+
+  }
+
+
+  function calculateCancellationRate(total, cancelled) {
+
+    total = toNumber(total);
+    cancelled = toNumber(cancelled);
+
+    if (total <= 0) {
+      return 0;
+    }
+
+    return Number(
+      ((cancelled / total) * 100).toFixed(2)
+    );
+
+  }
+
+
+  function getStatusLabel(color) {
+
+    return STATUS_CONFIG[color]?.label ||
+      "Estado no definido";
+
+  }
+
+
+  function normalizeBranch(raw) {
+
+    const codigo =
+      raw.codigo ??
+      raw.codigoBodega ??
+      "";
+
+    const nombre =
+      raw.nombre ??
+      raw.nombreSucursal ??
+      "";
+
+    const negocio =
+      raw.negocio ??
+      "";
+
+    const direccion =
+      raw.direccion ??
+      "";
+
+    const lat =
+      toNumber(raw.lat);
+
+    const lng =
+      toNumber(raw.lng);
+
+    const total =
+      toNumber(
+        raw.total_pedidos ??
+        raw.pedidosTotal ??
+        0
+      );
+
+    const cancelados =
+      toNumber(
+        raw.pedidos_cancelados ??
+        raw.pedidosCancelados ??
+        0
+      );
+
+    let color =
+      raw.color ||
+      "#9333ea";
+
+    if (!STATUS_CONFIG[color]) {
+      color = "#9333ea";
+    }
+
+    return {
+
+      codigo: String(codigo),
+
+      nombre: String(nombre),
+
+      negocio: String(negocio),
+
+      direccion: String(direccion),
+
+      lat,
+
+      lng,
+
+      total_pedidos: total,
+
+      pedidos_cancelados: cancelados,
+
+      color,
+
+      tasaCancelacion:
+        calculateCancellationRate(
+          total,
+          cancelados
+        )
+
+    };
+
+  }
+
+
+  /* ==========================================================
+     CONEXIÓN / ESTADO
+  =========================================================== */
+
+  function setConnectionStatus(
+    status,
+    message
+  ) {
+
+    connectionText.textContent = message;
+
+    connectionStatus.className =
+      "flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg";
+
+    if (status === "online") {
+
+      connectionStatus.classList.add(
+        "bg-green-50",
+        "text-green-700"
+      );
+
+      connectionDot.className =
+        "w-2.5 h-2.5 rounded-full bg-green-500";
+
+    }
+
+    else if (status === "syncing") {
+
+      connectionStatus.classList.add(
+        "bg-blue-50",
+        "text-blue-700"
+      );
+
+      connectionDot.className =
+        "w-2.5 h-2.5 rounded-full bg-blue-500";
+
+    }
+
+    else {
+
+      connectionStatus.classList.add(
+        "bg-amber-50",
+        "text-amber-700"
+      );
+
+      connectionDot.className =
+        "w-2.5 h-2.5 rounded-full bg-amber-500";
+
+    }
+
+  }
+
+
+  /* ==========================================================
+     LOCAL STORAGE
+  =========================================================== */
+
+  function saveLocalData() {
+
+    try {
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(branches)
+      );
+
+    } catch (error) {
+
+      console.warn(
+        "No se pudo guardar LocalStorage:",
+        error
+      );
+
+    }
+
+  }
+
+
+  function loadLocalData() {
+
+    try {
+
+      const saved =
+        localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        return [];
+      }
+
+      const parsed =
+        JSON.parse(saved);
+
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed.map(normalizeBranch);
+
+    } catch (error) {
+
+      console.warn(
+        "Error leyendo LocalStorage:",
+        error
+      );
+
+      return [];
+
+    }
+
+  }
+
+
+  /* ==========================================================
+     EXTRACCIÓN DE DATOS DE APPS SCRIPT
+  =========================================================== */
+
+  function extractBranches(data) {
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (
+      data &&
+      Array.isArray(data.sucursales)
+    ) {
+      return data.sucursales;
+    }
+
+    if (
+      data &&
+      Array.isArray(data.data)
+    ) {
+      return data.data;
+    }
+
+    return [];
+
+  }
+
+
+  /* ==========================================================
+     LECTURA MEDIANTE JSONP
+     
+     Apps Script puede devolver JSONP si su doGet acepta
+     el parámetro "prefix".
+  =========================================================== */
+
+  function fetchJSONP() {
+
+    return new Promise((resolve, reject) => {
+
+      const callbackName =
+        "__mapaLogisticoCallback_" +
+        Date.now() +
+        "_" +
+        Math.floor(Math.random() * 10000);
+
+      const script =
+        document.createElement("script");
+
+      let finished = false;
+
+      const timeout =
+        setTimeout(() => {
+
+          if (finished) {
+            return;
+          }
+
+          finished = true;
+
+          cleanup();
+
+          reject(
+            new Error(
+              "JSONP timeout"
+            )
+          );
+
+        }, 9000);
+
+
+      function cleanup() {
+
+        clearTimeout(timeout);
+
+        try {
+          delete window[callbackName];
+        } catch (e) {
+          window[callbackName] = undefined;
+        }
+
+        script.remove();
+
+      }
+
+
+      window[callbackName] =
+        function(data) {
+
+          if (finished) {
+            return;
+          }
+
+          finished = true;
+
+          cleanup();
+
+          resolve(data);
+
+        };
+
+
+      script.onerror = function() {
+
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+
+        cleanup();
+
+        reject(
+          new Error(
+            "JSONP request failed"
+          )
+        );
+
+      };
+
+
+      script.src =
+        API_URL +
+        "?action=get" +
+        "&prefix=" +
+        encodeURIComponent(callbackName) +
+        "&t=" +
+        Date.now();
+
+      document.head.appendChild(script);
+
+    });
+
+  }
+
+
+  /* ==========================================================
+     LECTURA MEDIANTE FETCH
+     
+     Se conserva como segundo mecanismo de lectura.
+  =========================================================== */
+
+  async function fetchJSON() {
+
+    const response =
+      await fetch(
+        API_URL +
+        "?action=get&t=" +
+        Date.now(),
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
+    if (!response.ok) {
+
+      throw new Error(
+        "HTTP " + response.status
+      );
+
+    }
+
+    return await response.json();
+
+  }
+
+
+  /* ==========================================================
+     CARGAR DESDE GOOGLE SHEETS
+  =========================================================== */
+
+  async function loadFromGoogleSheets() {
+
+    setConnectionStatus(
+      "syncing",
+      "Sincronizando..."
+    );
+
+    let data = null;
+
+
+    /* -----------------------------------------------
+       1. Intentar JSONP
+    ------------------------------------------------ */
+
+    try {
+
+      data = await fetchJSONP();
+
+    } catch (jsonpError) {
+
+      console.warn(
+        "JSONP no disponible. Intentando fetch...",
+        jsonpError
+      );
+
+    }
+
+
+    /* -----------------------------------------------
+       2. Intentar fetch
+    ------------------------------------------------ */
+
+    if (!data) {
+
+      try {
+
+        data = await fetchJSON();
+
+      } catch (fetchError) {
+
+        console.error(
+          "Error de lectura:",
+          fetchError
+        );
+
+        const localData =
+          loadLocalData();
+
+        if (localData.length) {
+
+          branches = localData;
+
+          renderAll();
+
+          setConnectionStatus(
+            "offline",
+            "Modo local"
+          );
+
+          return false;
+
+        }
+
+        branches = [];
+
+        renderAll();
+
+        setConnectionStatus(
+          "offline",
+          "Sin conexión"
+        );
+
+        return false;
+
+      }
+
+    }
+
+
+    const remoteBranches =
+      extractBranches(data)
+        .map(normalizeBranch)
+        .filter(branch =>
+          branch.codigo ||
+          branch.nombre
+        );
+
+
+    branches = remoteBranches;
+
+    saveLocalData();
+
+    renderAll();
+
+    setConnectionStatus(
+      "online",
+      "Google Sheets conectado"
+    );
+
+    return true;
+
+  }
+
+
+  /* ==========================================================
+     ESCRITURA: FETCH NO-CORS
+     
+     No intentamos leer la respuesta porque no-cors produce
+     una respuesta opaca. Lo importante es que el POST llega
+     a doPost() sin preflight CORS.
+  =========================================================== */
+
+  async function sendNoCorsPost(
+    action,
+    branch
+  ) {
+
+    const payload = {
+
+      action,
+
+      codigo: branch.codigo,
+
+      nombre: branch.nombre,
+
+      negocio: branch.negocio,
+
+      direccion: branch.direccion,
+
+      lat: branch.lat,
+
+      lng: branch.lng,
+
+      total_pedidos:
+        branch.total_pedidos,
+
+      pedidos_cancelados:
+        branch.pedidos_cancelados,
+
+      color: branch.color
+
+    };
+
+
+    try {
+
+      await fetch(
+        API_URL,
+        {
+          method: "POST",
+
+          mode: "no-cors",
+
+          headers: {
+            "Content-Type":
+              "text/plain;charset=utf-8"
+          },
+
+          body:
+            JSON.stringify(payload)
+        }
+      );
+
+      return true;
+
+    } catch (error) {
+
+      console.warn(
+        "POST no-cors falló:",
+        error
+      );
+
+      return false;
+
+    }
+
+  }
+
+
+  /* ==========================================================
+     ESCRITURA: IFRAME OCULTO
+     
+     Respaldo compatible con Apps Script que lea
+     e.parameter.payload.
+  =========================================================== */
+
+  function sendIframePost(
+    action,
+    branch
+  ) {
+
+    return new Promise((resolve) => {
+
+      const iframe =
+        document.getElementById(
+          "hiddenPostFrame"
+        );
+
+      const form =
+        document.createElement("form");
+
+      form.method = "POST";
+
+      form.action = API_URL;
+
+      form.target =
+        "hiddenPostFrame";
+
+      form.style.display =
+        "none";
+
+
+      const actionInput =
+        document.createElement("input");
+
+      actionInput.type =
+        "hidden";
+
+      actionInput.name =
+        "action";
+
+      actionInput.value =
+        action;
+
+      form.appendChild(
+        actionInput
+      );
+
+
+      const payloadInput =
+        document.createElement("input");
+
+      payloadInput.type =
+        "hidden";
+
+      payloadInput.name =
+        "payload";
+
+      payloadInput.value =
+        JSON.stringify({
+
+          codigo: branch.codigo,
+
+          nombre: branch.nombre,
+
+          negocio: branch.negocio,
+
+          direccion: branch.direccion,
+
+          lat: branch.lat,
+
+          lng: branch.lng,
+
+          total_pedidos:
+            branch.total_pedidos,
+
+          pedidos_cancelados:
+            branch.pedidos_cancelados,
+
+          color: branch.color
+
+        });
+
+      form.appendChild(
+        payloadInput
+      );
+
+
+      document.body.appendChild(
+        form
+      );
+
+
+      let completed = false;
+
+
+      iframe.onload = function() {
+
+        if (completed) {
+          return;
+        }
+
+        completed = true;
+
+        form.remove();
+
+        resolve(true);
+
+      };
+
+
+      setTimeout(() => {
+
+        if (completed) {
+          return;
+        }
+
+        completed = true;
+
+        form.remove();
+
+        resolve(true);
+
+      }, 3500);
+
+
+      form.submit();
+
+    });
+
+  }
+
+
+  /* ==========================================================
+     SINCRONIZACIÓN DE CAMBIOS
+  =========================================================== */
+
+  async function syncChange(
+    action,
+    branch
+  ) {
+
+    setConnectionStatus(
+      "syncing",
+      "Guardando..."
+    );
+
+
+    /*
+      Primer mecanismo:
+      POST no-cors con JSON.
+
+      Esto es especialmente útil si el doPost()
+      actual procesa e.postData.contents.
+    */
+
+    const sent =
+      await sendNoCorsPost(
+        action,
+        branch
+      );
+
+
+    /*
+      El iframe se ejecuta como respaldo.
+      No se depende de la respuesta para actualizar
+      la interfaz local.
+    */
+
+    if (!sent) {
+
+      await sendIframePost(
+        action,
+        branch
+      );
+
+    }
+
+
+    /*
+      La fuente visual inmediata es LocalStorage.
+      Luego se vuelve a leer Sheets para verificar
+      la sincronización.
+    */
+
+    saveLocalData();
+
+    setConnectionStatus(
+      "syncing",
+      "Verificando..."
+    );
+
+
+    setTimeout(() => {
+
+      loadFromGoogleSheets();
+
+    }, 1200);
+
+  }
+
+
+  /* ==========================================================
+     MARKER HTML
+  =========================================================== */
+
+  function createMarkerIcon(color) {
+
+    return L.divIcon({
+
+      className: "",
+
+      html: `
+        <div
+          class="branch-marker"
+          style="background:${escapeHTML(color)}"
+        >
+          <div class="branch-marker-inner"></div>
+        </div>
+      `,
+
+      iconSize: [30, 30],
+
+      iconAnchor: [15, 30],
+
+      popupAnchor: [0, -30]
+
+    });
+
+  }
+
+
+  /* ==========================================================
+     POPUP
+  =========================================================== */
+
+  function createPopup(branch) {
+
+    const status =
+      getStatusLabel(
+        branch.color
+      );
+
+
+    return `
+      <div style="min-width:260px">
+
+        <div class="flex items-start justify-between gap-3 mb-3">
+
+          <div>
+            <h3
+              style="
+                margin:0;
+                font-size:16px;
+                font-weight:700;
+                color:#1e293b;
+              "
+            >
+              ${escapeHTML(branch.nombre)}
+            </h3>
+
+            <p
+              style="
+                margin:3px 0 0;
+                font-size:12px;
+                color:#64748b;
+              "
+            >
+              Código: ${escapeHTML(branch.codigo)}
+            </p>
+          </div>
+
+          <span
+            style="
+              display:block;
+              width:14px;
+              height:14px;
+              border-radius:50%;
+              background:${escapeHTML(branch.color)};
+              flex-shrink:0;
+              margin-top:3px;
+            "
+          ></span>
+
+        </div>
+
+
+        <div
+          style="
+            font-size:13px;
+            color:#475569;
+            line-height:1.6;
+          "
+        >
+
+          <div>
+            <strong>Negocio:</strong>
+            ${escapeHTML(branch.negocio)}
+          </div>
+
+          <div>
+            <strong>Dirección:</strong>
+            ${escapeHTML(branch.direccion || "No registrada")}
+          </div>
+
+          <div>
+            <strong>Total pedidos:</strong>
+            ${branch.total_pedidos}
+          </div>
+
+          <div>
+            <strong>Pedidos cancelados:</strong>
+            ${branch.pedidos_cancelados}
+          </div>
+
+          <div>
+            <strong>Tasa de cancelación:</strong>
+            ${branch.tasaCancelacion.toFixed(2)}%
+          </div>
+
+          <div style="margin-top:5px">
+            <strong>Estado:</strong>
+            ${escapeHTML(status)}
+          </div>
+
+          <div
+            style="
+              margin-top:10px;
+              padding:8px;
+              background:#f1f5f9;
+              border-radius:8px;
+              text-align:center;
+              font-weight:600;
+              color:#334155;
+            "
+          >
+            Radio de cobertura: 1.000 metros
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+  }
+
+
+  /* ==========================================================
+     DIBUJAR MAPA
+  =========================================================== */
+
+  function renderMap() {
+
+    markersLayer.clearLayers();
+
+
+    if (coverageCircle) {
+
+      map.removeLayer(
+        coverageCircle
+      );
+
+      coverageCircle = null;
+
+    }
+
+
+    if (!filteredBranches.length) {
+
+      map.setView(
+        MAP_CENTER,
+        12
+      );
+
+      return;
+
+    }
+
+
+    const bounds = [];
+
+
+    filteredBranches.forEach(branch => {
+
+      if (
+        !Number.isFinite(branch.lat) ||
+        !Number.isFinite(branch.lng)
+      ) {
+        return;
+      }
+
+
+      const marker =
+        L.marker(
+          [branch.lat, branch.lng],
+          {
+            icon:
+              createMarkerIcon(
+                branch.color
+              )
+          }
+        );
+
+
+      marker.bindPopup(
+        createPopup(branch),
+        {
+          maxWidth: 360
+        }
+      );
+
+
+      marker.on(
+        "click",
+        function() {
+
+          if (coverageCircle) {
+
+            map.removeLayer(
+              coverageCircle
+            );
+
+          }
+
+
+          coverageCircle =
+            L.circle(
+              [branch.lat, branch.lng],
+              {
+                radius:
+                  COVERAGE_RADIUS,
+
+                color:
+                  branch.color,
+
+                weight: 2,
+
+                fillColor:
+                  branch.color,
+
+                fillOpacity: 0.10,
+
+                interactive: false
+              }
+            ).addTo(map);
+
+
+          map.flyTo(
+            [branch.lat, branch.lng],
+            Math.max(
+              map.getZoom(),
+              14
+            ),
+            {
+              duration: 0.7
+            }
+          );
+
+        }
+      );
+
+
+      marker.addTo(
+        markersLayer
+      );
+
+
+      bounds.push(
+        [branch.lat, branch.lng]
+      );
+
+    });
+
+
+    if (bounds.length === 1) {
+
+      map.setView(
+        bounds[0],
+        14
+      );
+
+    }
+
+    else if (bounds.length > 1) {
+
+      map.fitBounds(
+        bounds,
+        {
+          padding: [35, 35],
+          maxZoom: 15
+        }
+      );
+
+    }
+
+    else {
+
+      map.setView(
+        MAP_CENTER,
+        12
+      );
+
+    }
+
+  }
+
+
+  /* ==========================================================
+     FILTROS
+  =========================================================== */
+
+  function applyFilters() {
+
+    const business =
+      businessFilter.value;
+
+
+    const search =
+      normalizeText(
+        branchSearch.value
+      );
+
+
+    filteredBranches =
+      branches.filter(branch => {
+
+        const businessMatch =
+          business === "Todos" ||
+          branch.negocio === business;
+
+
+        const searchMatch =
+          !search ||
+          normalizeText(
+            branch.nombre
+          ).includes(search) ||
+          normalizeText(
+            branch.codigo
+          ).includes(search);
+
+
+        return (
+          businessMatch &&
+          searchMatch
+        );
+
+      });
+
+
+    renderMap();
+
+    renderBranchList();
+
+    updateCounters();
+
+  }
+
+
+  /* ==========================================================
+     BUSCADOR
+  =========================================================== */
+
+  function getSearchMatches(query) {
+
+    const normalized =
+      normalizeText(query);
+
+
+    if (!normalized) {
+      return [];
+    }
+
+
+    return branches
+      .filter(branch => {
+
+        return (
+          normalizeText(
+            branch.nombre
+          ).includes(normalized) ||
+
+          normalizeText(
+            branch.codigo
+          ).includes(normalized)
+        );
+
+      })
+      .slice(0, 10);
+
+  }
+
+
+  function renderSearchResults(
+    query
+  ) {
+
+    const matches =
+      getSearchMatches(query);
+
+
+    if (!query.trim()) {
+
+      searchResults.classList.add(
+        "hidden"
+      );
+
+      searchResults.innerHTML = "";
+
+      return;
+
+    }
+
+
+    if (!matches.length) {
+
+      searchResults.innerHTML = `
+        <div class="px-4 py-3 text-sm text-slate-500">
+          No se encontraron sucursales.
+        </div>
+      `;
+
+      searchResults.classList.remove(
+        "hidden"
+      );
+
+      return;
+
+    }
+
+
+    searchResults.innerHTML =
+      matches.map(branch => `
+
+        <button
+          type="button"
+          class="search-result w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0"
+          data-code="${escapeHTML(branch.codigo)}"
+        >
+
+          <div class="flex items-center gap-3">
+
+            <span
+              class="w-3 h-3 rounded-full shrink-0"
+              style="background:${escapeHTML(branch.color)}"
+            ></span>
+
+            <div class="min-w-0">
+
+              <p class="font-semibold text-sm text-slate-700 truncate">
+                ${escapeHTML(branch.nombre)}
+              </p>
+
+              <p class="text-xs text-slate-400 truncate">
+                ${escapeHTML(branch.codigo)}
+                ·
+                ${escapeHTML(branch.negocio)}
+              </p>
+
+            </div>
+
+          </div>
+
+        </button>
+
+      `).join("");
+
+
+    searchResults.classList.remove(
+      "hidden"
+    );
+
+
+    searchResults
+      .querySelectorAll(
+        ".search-result"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            const code =
+              button.dataset.code;
+
+            focusBranchByCode(
+              code
+            );
+
+            searchResults.classList.add(
+              "hidden"
+            );
+
+          }
+        );
+
+      });
+
+  }
+
+
+  function focusBranchByCode(
+    code
+  ) {
+
+    const branch =
+      branches.find(
+        item =>
+          String(item.codigo) ===
+          String(code)
+      );
+
+
+    if (!branch) {
+      return;
+    }
+
+
+    branchSearch.value =
+      branch.nombre;
+
+
+    clearSearchBtn.classList.remove(
+      "hidden"
+    );
+
+
+    /*
+      No cambiamos el negocio automáticamente.
+      El buscador y el filtro de negocio
+      permanecen conceptualmente separados.
+    */
+
+    if (
+      Number.isFinite(branch.lat) &&
+      Number.isFinite(branch.lng)
+    ) {
+
+      if (coverageCircle) {
+
+        map.removeLayer(
+          coverageCircle
+        );
+
+      }
+
+
+      coverageCircle =
+        L.circle(
+          [branch.lat, branch.lng],
+          {
+            radius:
+              COVERAGE_RADIUS,
+
+            color:
+              branch.color,
+
+            weight: 2,
+
+            fillColor:
+              branch.color,
+
+            fillOpacity: 0.10,
+
+            interactive: false
+          }
+        ).addTo(map);
+
+
+      map.flyTo(
+        [branch.lat, branch.lng],
+        15,
+        {
+          duration: 0.8
+        }
+      );
+
+    }
+
+
+    openBranchPopup(
+      branch
+    );
+
+  }
+
+
+  function openBranchPopup(
+    branch
+  ) {
+
+    let opened = false;
+
+
+    markersLayer.eachLayer(
+      marker => {
+
+        if (
+          marker.getLatLng &&
+          marker.getLatLng().lat === branch.lat &&
+          marker.getLatLng().lng === branch.lng
+        ) {
+
+          marker.openPopup();
+
+          opened = true;
+
+        }
+
+      }
+    );
+
+
+    /*
+      Si el negocio seleccionado ocultó el marcador,
+      mostramos el punto directamente.
+    */
+
+    if (!opened) {
+
+      const tempMarker =
+        L.marker(
+          [branch.lat, branch.lng],
+          {
+            icon:
+              createMarkerIcon(
+                branch.color
+              )
+          }
+        ).addTo(
+          map
+        );
+
+
+      tempMarker
+        .bindPopup(
+          createPopup(branch)
+        )
+        .openPopup();
+
+
+      setTimeout(() => {
+
+        map.removeLayer(
+          tempMarker
+        );
+
+      }, 5000);
+
+    }
+
+  }
+
+
+  branchSearch.addEventListener(
+    "input",
+    function() {
+
+      const value =
+        this.value.trim();
+
+
+      clearSearchBtn.classList.toggle(
+        "hidden",
+        !value
+      );
+
+
+      clearTimeout(
+        searchTimer
+      );
+
+
+      renderSearchResults(
+        value
+      );
+
+
+      searchTimer =
+        setTimeout(() => {
+
+          if (!value) {
+
+            applyFilters();
+
+            return;
+
+          }
+
+
+          const matches =
+            getSearchMatches(value);
+
+
+          /*
+            Si existe una coincidencia exacta,
+            se centra inmediatamente.
+          */
+
+          const exact =
+            matches.find(branch =>
+
+              normalizeText(
+                branch.nombre
+              ) ===
+              normalizeText(value)
+
+              ||
+
+              normalizeText(
+                branch.codigo
+              ) ===
+              normalizeText(value)
+
+            );
+
+
+          /*
+            Si solo existe una coincidencia,
+            también se centra automáticamente.
+          */
+
+          if (
+            exact ||
+            matches.length === 1
+          ) {
+
+            focusBranchByCode(
+              (
+                exact ||
+                matches[0]
+              ).codigo
+            );
+
+          }
+
+          else {
+
+            applyFilters();
+
+          }
+
+        }, 300);
+
+    }
+  );
+
+
+  clearSearchBtn.addEventListener(
+    "click",
+    () => {
+
+      branchSearch.value = "";
+
+      clearSearchBtn.classList.add(
+        "hidden"
+      );
+
+      searchResults.classList.add(
+        "hidden"
+      );
+
+      applyFilters();
+
+      branchSearch.focus();
+
+    }
+  );
+
+
+  document.addEventListener(
+    "click",
+    event => {
+
+      if (
+        !searchResults.contains(event.target) &&
+        event.target !== branchSearch
+      ) {
+
+        searchResults.classList.add(
+          "hidden"
+        );
+
+      }
+
+    }
+  );
+
+
+  businessFilter.addEventListener(
+    "change",
+    applyFilters
+  );
+
+
+  /* ==========================================================
+     LISTADO DE SUCURSALES
+  =========================================================== */
+
+  function renderBranchList() {
+
+    if (!filteredBranches.length) {
+
+      branchList.innerHTML = `
+        <div class="text-sm text-slate-400 py-4 text-center">
+          No hay sucursales para mostrar.
+        </div>
+      `;
+
+      return;
+
+    }
+
+
+    branchList.innerHTML =
+      filteredBranches
+        .map(branch => `
+
+          <div
+            class="border border-slate-200 rounded-xl p-3 hover:border-slate-300 transition"
+          >
+
+            <div class="flex items-start gap-3">
+
+              <span
+                class="w-3 h-3 rounded-full mt-1 shrink-0"
+                style="background:${escapeHTML(branch.color)}"
+              ></span>
+
+              <div class="min-w-0 flex-1">
+
+                <button
+                  type="button"
+                  class="text-left w-full"
+                  data-focus="${escapeHTML(branch.codigo)}"
+                >
+
+                  <p class="font-semibold text-sm text-slate-700 truncate">
+                    ${escapeHTML(branch.nombre)}
+                  </p>
+
+                  <p class="text-xs text-slate-400 truncate">
+                    ${escapeHTML(branch.codigo)}
+                    ·
+                    ${escapeHTML(branch.negocio)}
+                  </p>
+
+                </button>
+
+
+                <div class="flex gap-2 mt-2">
+
+                  <button
+                    type="button"
+                    class="text-xs text-blue-600 hover:text-blue-800"
+                    data-edit="${escapeHTML(branch.codigo)}"
+                  >
+                    Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    class="text-xs text-red-600 hover:text-red-800"
+                    data-delete="${escapeHTML(branch.codigo)}"
+                  >
+                    Eliminar
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        `)
+        .join("");
+
+
+    branchList
+      .querySelectorAll(
+        "[data-focus]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            focusBranchByCode(
+              button.dataset.focus
+            );
+
+          }
+        );
+
+      });
+
+
+    branchList
+      .querySelectorAll(
+        "[data-edit]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            startEdit(
+              button.dataset.edit
+            );
+
+          }
+        );
+
+      });
+
+
+    branchList
+      .querySelectorAll(
+        "[data-delete]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            deleteBranch(
+              button.dataset.delete
+            );
+
+          }
+        );
+
+      });
+
+  }
+
+
+  /* ==========================================================
+     CONTADORES
+  =========================================================== */
+
+  function updateCounters() {
+
+    branchCount.textContent =
+      branches.length;
+
+
+    const uniqueBusinesses =
+      new Set(
+        branches
+          .map(branch => branch.negocio)
+          .filter(Boolean)
+      );
+
+
+    businessCount.textContent =
+      uniqueBusinesses.size;
+
+
+    visibleCount.textContent =
+      filteredBranches.length;
+
+  }
+
+
+  /* ==========================================================
+     FORMULARIO
+  =========================================================== */
+
+  function getFormData() {
+
+    const selectedColor =
+      document.querySelector(
+        'input[name="statusColor"]:checked'
+      )?.value ||
+      "#9333ea";
+
+
+    return normalizeBranch({
+
+      codigo:
+        document.getElementById(
+          "codigo"
+        ).value.trim(),
+
+      nombre:
+        document.getElementById(
+          "nombre"
+        ).value.trim(),
+
+      negocio:
+        document.getElementById(
+          "negocio"
+        ).value,
+
+      direccion:
+        document.getElementById(
+          "direccion"
+        ).value.trim(),
+
+      lat:
+        document.getElementById(
+          "lat"
+        ).value,
+
+      lng:
+        document.getElementById(
+          "lng"
+        ).value,
+
+      total_pedidos:
+        document.getElementById(
+          "total_pedidos"
+        ).value,
+
+      pedidos_cancelados:
+        document.getElementById(
+          "pedidos_cancelados"
+        ).value,
+
+      color:
+        selectedColor
+
+    });
+
+  }
+
+
+  function setFormData(branch) {
+
+    document.getElementById(
+      "codigo"
+    ).value =
+      branch.codigo;
+
+    document.getElementById(
+      "nombre"
+    ).value =
+      branch.nombre;
+
+    document.getElementById(
+      "negocio"
+    ).value =
+      branch.negocio;
+
+    document.getElementById(
+      "direccion"
+    ).value =
+      branch.direccion;
+
+    document.getElementById(
+      "lat"
+    ).value =
+      branch.lat;
+
+    document.getElementById(
+      "lng"
+    ).value =
+      branch.lng;
+
+    document.getElementById(
+      "total_pedidos"
+    ).value =
+      branch.total_pedidos;
+
+    document.getElementById(
+      "pedidos_cancelados"
+    ).value =
+      branch.pedidos_cancelados;
+
+
+    document
+      .querySelectorAll(
+        'input[name="statusColor"]'
+      )
+      .forEach(radio => {
+
+        radio.checked =
+          radio.value ===
+          branch.color;
+
+      });
+
+  }
+
+
+  function clearForm() {
+
+    branchForm.reset();
+
+    document.getElementById(
+      "total_pedidos"
+    ).value = 0;
+
+    document.getElementById(
+      "pedidos_cancelados"
+    ).value = 0;
+
+
+    document
+      .querySelector(
+        'input[name="statusColor"][value="#9333ea"]'
+      )
+      .checked = true;
+
+
+    editingCode = null;
+
+
+    formTitle.textContent =
+      "Nueva sucursal";
+
+
+    cancelEditBtn.classList.add(
+      "hidden"
+    );
+
+
+    saveBtn.textContent =
+      "Guardar sucursal";
+
+  }
+
+
+  function startEdit(code) {
+
+    const branch =
+      branches.find(
+        item =>
+          String(item.codigo) ===
+          String(code)
+      );
+
+
+    if (!branch) {
+      return;
+    }
+
+
+    editingCode =
+      branch.codigo;
+
+
+    setFormData(
+      branch
+    );
+
+
+    formTitle.textContent =
+      "Editar sucursal";
+
+
+    cancelEditBtn.classList.remove(
+      "hidden"
+    );
+
+
+    saveBtn.textContent =
+      "Actualizar sucursal";
+
+
+    document
+      .querySelector("aside")
+      .scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+
+  }
+
+
+  cancelEditBtn.addEventListener(
+    "click",
+    clearForm
+  );
+
+
+  branchForm.addEventListener(
+    "submit",
+    async function(event) {
+
+      event.preventDefault();
+
+
+      const branch =
+        getFormData();
+
+
+      if (!branch.codigo) {
+
+        alert(
+          "El código es obligatorio."
+        );
+
+        return;
+
+      }
+
+
+      if (!branch.nombre) {
+
+        alert(
+          "El nombre de la sucursal es obligatorio."
+        );
+
+        return;
+
+      }
+
+
+      if (!branch.negocio) {
+
+        alert(
+          "Selecciona el negocio."
+        );
+
+        return;
+
+      }
+
+
+      if (
+        !Number.isFinite(branch.lat) ||
+        !Number.isFinite(branch.lng)
+      ) {
+
+        alert(
+          "Ingresa coordenadas válidas."
+        );
+
+        return;
+
+      }
+
+
+      const exists =
+        branches.some(
+          item =>
+            String(item.codigo) ===
+              String(branch.codigo) &&
+            String(item.codigo) !==
+              String(editingCode)
+        );
+
+
+      if (exists) {
+
+        alert(
+          "Ya existe una sucursal con ese código."
+        );
+
+        return;
+
+      }
+
+
+      const action =
+        editingCode
+          ? "update"
+          : "create";
+
+
+      if (editingCode) {
+
+        const index =
+          branches.findIndex(
+            item =>
+              String(item.codigo) ===
+              String(editingCode)
+          );
+
+
+        if (index !== -1) {
+
+          branches[index] =
+            branch;
+
+        }
+
+      }
+
+      else {
+
+        branches.push(
+          branch
+        );
+
+      }
+
+
+      saveLocalData();
+
+      clearForm();
+
+      renderAll();
+
+      await syncChange(
+        action,
+        branch
+      );
+
+    }
+  );
+
+
+  /* ==========================================================
+     ELIMINAR
+  =========================================================== */
+
+  async function deleteBranch(code) {
+
+    const branch =
+      branches.find(
+        item =>
+          String(item.codigo) ===
+          String(code)
+      );
+
+
+    if (!branch) {
+      return;
+    }
+
+
+    const confirmed =
+      confirm(
+        `¿Deseas eliminar la sucursal "${branch.nombre}"?`
+      );
+
+
+    if (!confirmed) {
+      return;
+    }
+
+
+    branches =
+      branches.filter(
+        item =>
+          String(item.codigo) !==
+          String(code)
+      );
+
+
+    saveLocalData();
+
+    renderAll();
+
+
+    await syncChange(
+      "delete",
+      branch
+    );
+
+  }
+
+
+  /* ==========================================================
+     RENDER GENERAL
+  =========================================================== */
+
+  function renderAll() {
+
+    applyFilters();
+
+  }
+
+
+  /* ==========================================================
+     MAPA RESPONSIVE
+  =========================================================== */
+
+  function refreshMapSize() {
+
+    setTimeout(() => {
+
+      map.invalidateSize({
+        pan: false
+      });
+
+    }, 150);
+
+  }
+
+
+  window.addEventListener(
+    "resize",
+    refreshMapSize
+  );
+
+
+  window.addEventListener(
+    "orientationchange",
+    refreshMapSize
+  );
+
+
+  /* ==========================================================
+     ACTUALIZAR MANUALMENTE
+  =========================================================== */
+
+  refreshBtn.addEventListener(
+    "click",
+    async () => {
+
+      refreshBtn.disabled =
+        true;
+
+      refreshBtn.textContent =
+        "Actualizando...";
+
+
+      try {
+
+        await loadFromGoogleSheets();
+
+      } finally {
+
+        refreshBtn.disabled =
+          false;
+
+        refreshBtn.textContent =
+          "Actualizar";
+
+        refreshMapSize();
+
+      }
+
+    }
+  );
+
+
+  /* ==========================================================
+     INICIALIZACIÓN
+  =========================================================== */
+
+  async function init() {
+
+    /*
+      Primero mostramos inmediatamente
+      lo que exista en LocalStorage.
+    */
+
+    branches =
+      loadLocalData();
+
+
+    renderAll();
+
+
+    refreshMapSize();
+
+
+    /*
+      Después intentamos cargar
+      la información real de Sheets.
+    */
+
+    await loadFromGoogleSheets();
+
+
+    refreshMapSize();
+
+
+    /*
+      Segundo invalidateSize después
+      de que el navegador haya terminado
+      de calcular dimensiones.
+    */
+
+    setTimeout(
+      refreshMapSize,
+      500
+    );
+
+
+    setTimeout(
+      refreshMapSize,
+      1500
+    );
+
+  }
+
+
+  init();
+
+
+  /* ==========================================================
+     SINCRONIZACIÓN AUTOMÁTICA
+  =========================================================== */
+
+  setInterval(
+    () => {
+
+      /*
+        No interrumpimos una edición activa.
+      */
+
+      if (!editingCode) {
+
+        loadFromGoogleSheets();
+
+      }
+
+    },
+    30000
+  );
+
+</script>
+
+</body>
+</html>
