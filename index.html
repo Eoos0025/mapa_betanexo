@@ -1,3124 +1,2639 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Logístico - Santa Cruz</title>
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIINfQ3cY0qH1Y1N8+7K0W9q5X0dK6XK6M="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    html,
-    body {
-      height: 100%;
-      margin: 0;
-    }
+    <title>Mapa Logístico — Santa Cruz de la Sierra</title>
 
-    body {
-      background: #f8fafc;
-      overflow: hidden;
-    }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    #app {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ3cR6n6xF1Q5FfQF8W8j0wQ6QwF0Q="
+        crossorigin=""
+    />
 
-    #map {
-      width: 100%;
-      height: 100%;
-      min-height: 500px;
-    }
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
 
-    .leaflet-popup-content-wrapper {
-      border-radius: 12px;
-    }
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
 
-    .leaflet-popup-content {
-      margin: 14px;
-    }
+        #app {
+            width: 100%;
+            height: 100%;
+        }
 
-    .branch-marker {
-      width: 30px;
-      height: 30px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      border: 3px solid white;
-      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
-    }
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            z-index: 1;
+        }
 
-    .branch-marker-inner {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: white;
-      position: absolute;
-      top: 6px;
-      left: 6px;
-    }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+        }
 
-    .search-result:hover {
-      background: #f1f5f9;
-    }
+        .leaflet-popup-content {
+            margin: 14px 16px;
+        }
 
-    .scroll-panel {
-      overflow-y: auto;
-      overflow-x: hidden;
-      scrollbar-width: thin;
-    }
+        .marker-pin {
+            width: 34px;
+            height: 34px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-    .scroll-panel::-webkit-scrollbar {
-      width: 7px;
-    }
+        .marker-pin-inner {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+        }
 
-    .scroll-panel::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 10px;
-    }
+        .sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
 
-    .scroll-panel::-webkit-scrollbar-track {
-      background: transparent;
-    }
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 7px;
+        }
 
-    @media (max-width: 1023px) {
-      body {
-        overflow: auto;
-      }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-      #app {
-        height: auto;
-        min-height: 100vh;
-      }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
 
-      #map {
-        height: 65vh;
-        min-height: 430px;
-      }
-    }
+        .status-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
 
-    @media (max-width: 640px) {
-      #map {
-        height: 58vh;
-        min-height: 380px;
-      }
-    }
-  </style>
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e1;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                width: min(92vw, 380px);
+            }
+
+            .mobile-panel {
+                max-height: 82vh;
+            }
+        }
+    </style>
 </head>
 
-<body>
+<body class="bg-slate-100">
 
-<div id="app">
+<div id="app" class="relative">
 
-  <!-- =========================================================
-       HEADER
-  ========================================================== -->
-  <header class="bg-white border-b border-slate-200 shadow-sm z-30">
-    <div class="max-w-[1800px] mx-auto px-4 py-3">
+    <!-- MAPA -->
+    <div id="map"></div>
 
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+    <!-- PANEL LATERAL -->
+    <aside
+        id="sidebar"
+        class="
+            absolute
+            left-3
+            top-3
+            bottom-3
+            z-[1000]
+            w-[390px]
+            max-w-[calc(100vw-24px)]
+            bg-white
+            rounded-2xl
+            shadow-2xl
+            border
+            border-slate-200
+            flex
+            flex-col
+            overflow-hidden
+        "
+    >
 
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold text-slate-800">
-            Mapa Logístico
-          </h1>
+        <!-- CABECERA -->
+        <div class="px-5 pt-5 pb-4 border-b border-slate-200 bg-white shrink-0">
 
-          <p class="text-sm text-slate-500">
-            Santa Cruz de la Sierra · Gestión de sucursales
-          </p>
-        </div>
+            <div class="flex items-start justify-between gap-3">
 
-        <div class="flex items-center gap-3">
+                <div>
+                    <h1 class="text-xl font-bold text-slate-800">
+                        Mapa Logístico
+                    </h1>
 
-          <!-- Estado conexión -->
-          <div
-            id="connectionStatus"
-            class="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg bg-slate-100 text-slate-600"
-          >
-            <span
-              id="connectionDot"
-              class="w-2.5 h-2.5 rounded-full bg-slate-400"
-            ></span>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Santa Cruz de la Sierra, Bolivia
+                    </p>
+                </div>
 
-            <span id="connectionText">
-              Conectando...
-            </span>
-          </div>
+                <!-- ESTADO CONEXIÓN -->
+                <div
+                    id="connectionStatus"
+                    class="
+                        flex
+                        items-center
+                        gap-2
+                        text-xs
+                        font-medium
+                        px-2.5
+                        py-1.5
+                        rounded-full
+                        bg-slate-100
+                        text-slate-500
+                        whitespace-nowrap
+                    "
+                >
+                    <span id="connectionDot"
+                          class="status-dot bg-slate-400"></span>
 
-          <button
-            id="refreshBtn"
-            type="button"
-            class="px-3 py-2 rounded-lg bg-slate-800 text-white text-sm hover:bg-slate-700 transition"
-          >
-            Actualizar
-          </button>
-
-        </div>
-      </div>
-
-    </div>
-  </header>
-
-
-  <!-- =========================================================
-       MAIN
-  ========================================================== -->
-  <main class="flex-1 min-h-0">
-
-    <div class="max-w-[1800px] mx-auto h-full grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
-
-      <!-- =====================================================
-           PANEL LATERAL
-      ====================================================== -->
-      <aside
-        class="bg-white border-r border-slate-200 flex flex-col min-h-0"
-      >
-
-        <!-- PANEL SCROLLABLE -->
-        <div class="scroll-panel flex-1 p-4 space-y-5">
-
-          <!-- =================================================
-               BUSCADOR
-          ================================================== -->
-          <section>
-
-            <label
-              for="branchSearch"
-              class="block text-sm font-semibold text-slate-700 mb-2"
-            >
-              Buscar sucursal
-            </label>
-
-            <div class="relative">
-
-              <input
-                id="branchSearch"
-                type="search"
-                autocomplete="off"
-                placeholder="Nombre o código..."
-                class="w-full border border-slate-300 rounded-xl px-4 py-3 pr-10 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-
-              <button
-                id="clearSearchBtn"
-                type="button"
-                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                aria-label="Limpiar búsqueda"
-              >
-                ×
-              </button>
+                    <span id="connectionText">
+                        Conectando...
+                    </span>
+                </div>
 
             </div>
 
-            <!-- Sugerencias -->
+            <!-- FILTRO NEGOCIO -->
+            <div class="mt-4">
+
+                <label
+                    for="businessFilter"
+                    class="block text-xs font-semibold text-slate-600 mb-1.5"
+                >
+                    Filtrar por negocio
+                </label>
+
+                <select
+                    id="businessFilter"
+                    class="
+                        w-full
+                        rounded-xl
+                        border
+                        border-slate-300
+                        bg-white
+                        px-3
+                        py-2.5
+                        text-sm
+                        text-slate-700
+                        outline-none
+                        focus:ring-2
+                        focus:ring-blue-500
+                        focus:border-blue-500
+                    "
+                >
+                    <option value="Todos">Todos</option>
+                    <option value="Farmacorp">Farmacorp</option>
+                    <option value="Amarket">Amarket</option>
+                    <option value="Dr. Osvaldo">Dr. Osvaldo</option>
+                    <option value="Pizza Hut">Pizza Hut</option>
+                </select>
+
+            </div>
+
+            <!-- LEYENDA -->
+            <div class="mt-4">
+
+                <p class="text-xs font-semibold text-slate-600 mb-2">
+                    Estados operativos
+                </p>
+
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+
+                    <div class="flex items-center gap-1.5">
+                        <span class="status-dot bg-purple-600"></span>
+                        <span class="text-slate-600">Se mantiene</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <span class="status-dot bg-green-500"></span>
+                        <span class="text-slate-600">
+                            Se mantiene eventualmente
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <span class="status-dot bg-blue-500"></span>
+                        <span class="text-slate-600">En observación</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <span class="status-dot bg-orange-500"></span>
+                        <span class="text-slate-600">Condicionada</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <span class="status-dot bg-red-600"></span>
+                        <span class="text-slate-600">
+                            Definitiva eliminación
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- CONTENIDO SCROLLABLE -->
+        <div
+            class="
+                sidebar-scroll
+                flex-1
+                min-h-0
+                overflow-y-auto
+                px-5
+                py-4
+            "
+        >
+
+            <!-- RESUMEN -->
+            <div class="grid grid-cols-3 gap-2 mb-4">
+
+                <div class="bg-slate-50 rounded-xl p-3 text-center">
+                    <p
+                        id="totalBranches"
+                        class="text-lg font-bold text-slate-800"
+                    >
+                        0
+                    </p>
+                    <p class="text-[10px] text-slate-500">
+                        Sucursales
+                    </p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-3 text-center">
+                    <p
+                        id="totalOrders"
+                        class="text-lg font-bold text-slate-800"
+                    >
+                        0
+                    </p>
+                    <p class="text-[10px] text-slate-500">
+                        Pedidos
+                    </p>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-3 text-center">
+                    <p
+                        id="totalCancelled"
+                        class="text-lg font-bold text-red-600"
+                    >
+                        0
+                    </p>
+                    <p class="text-[10px] text-slate-500">
+                        Cancelados
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- LISTA -->
+            <div class="flex items-center justify-between mb-2">
+
+                <h2 class="text-sm font-bold text-slate-700">
+                    Sucursales
+                </h2>
+
+                <button
+                    id="refreshButton"
+                    type="button"
+                    class="
+                        text-xs
+                        font-medium
+                        text-blue-600
+                        hover:text-blue-800
+                    "
+                >
+                    Actualizar
+                </button>
+
+            </div>
+
             <div
-              id="searchResults"
-              class="hidden mt-2 border border-slate-200 rounded-xl bg-white shadow-lg max-h-60 overflow-y-auto"
-            ></div>
-
-            <p class="text-xs text-slate-400 mt-2">
-              Escribe el nombre o código para localizar una sucursal.
-            </p>
-
-          </section>
-
-
-          <!-- =================================================
-               FILTRO DE NEGOCIO
-          ================================================== -->
-          <section>
-
-            <label
-              for="businessFilter"
-              class="block text-sm font-semibold text-slate-700 mb-2"
+                id="branchList"
+                class="space-y-2"
             >
-              Negocio
-            </label>
-
-            <select
-              id="businessFilter"
-              class="w-full border border-slate-300 rounded-xl px-3 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Todos">Todos</option>
-              <option value="Farmacorp">Farmacorp</option>
-              <option value="Amarket">Amarket</option>
-              <option value="Dr. Osvaldo">Dr. Osvaldo</option>
-              <option value="Pizza Hut">Pizza Hut</option>
-            </select>
-
-          </section>
-
-
-          <!-- =================================================
-               RESUMEN
-          ================================================== -->
-          <section class="grid grid-cols-2 gap-3">
-
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <p class="text-xs text-slate-500">
-                Sucursales
-              </p>
-
-              <p
-                id="branchCount"
-                class="text-2xl font-bold text-slate-800"
-              >
-                0
-              </p>
+                <div
+                    class="
+                        rounded-xl
+                        border
+                        border-slate-200
+                        p-4
+                        text-center
+                        text-sm
+                        text-slate-500
+                    "
+                >
+                    Cargando sucursales...
+                </div>
             </div>
 
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <p class="text-xs text-slate-500">
-                Negocios
-              </p>
-
-              <p
-                id="businessCount"
-                class="text-2xl font-bold text-slate-800"
-              >
-                0
-              </p>
-            </div>
-
-          </section>
+        </div>
 
 
-          <!-- =================================================
-               LEYENDA ÚNICA
-          ================================================== -->
-          <section>
+        <!-- ACCIONES INFERIORES -->
+        <div
+            class="
+                shrink-0
+                border-t
+                border-slate-200
+                bg-white
+                p-4
+            "
+        >
 
-            <div class="flex items-center justify-between mb-3">
-
-              <h2 class="text-sm font-bold text-slate-800">
-                Estado operativo
-              </h2>
-
-            </div>
-
-            <div class="space-y-2">
-
-              <div class="flex items-center gap-3 text-sm text-slate-600">
-                <span
-                  class="w-4 h-4 rounded-full shrink-0"
-                  style="background:#9333ea"
-                ></span>
-
-                <span>Se mantiene</span>
-              </div>
-
-              <div class="flex items-center gap-3 text-sm text-slate-600">
-                <span
-                  class="w-4 h-4 rounded-full shrink-0"
-                  style="background:#16a34a"
-                ></span>
-
-                <span>Se mantiene eventualmente</span>
-              </div>
-
-              <div class="flex items-center gap-3 text-sm text-slate-600">
-                <span
-                  class="w-4 h-4 rounded-full shrink-0"
-                  style="background:#2563eb"
-                ></span>
-
-                <span>En observación</span>
-              </div>
-
-              <div class="flex items-center gap-3 text-sm text-slate-600">
-                <span
-                  class="w-4 h-4 rounded-full shrink-0"
-                  style="background:#ea580c"
-                ></span>
-
-                <span>Condicionada</span>
-              </div>
-
-              <div class="flex items-center gap-3 text-sm text-slate-600">
-                <span
-                  class="w-4 h-4 rounded-full shrink-0"
-                  style="background:#dc2626"
-                ></span>
-
-                <span>Definitiva eliminación</span>
-              </div>
-
-            </div>
-
-            <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">
-              El color del pin se selecciona manualmente y es independiente
-              del negocio al que pertenece la sucursal.
-            </p>
-
-          </section>
-
-
-          <!-- =================================================
-               FORMULARIO
-          ================================================== -->
-          <section class="border-t border-slate-200 pt-5">
-
-            <div class="flex items-center justify-between mb-4">
-
-              <h2
-                id="formTitle"
-                class="text-sm font-bold text-slate-800"
-              >
-                Nueva sucursal
-              </h2>
-
-              <button
-                id="cancelEditBtn"
+            <button
+                id="openRegisterButton"
                 type="button"
-                class="hidden text-xs text-slate-500 hover:text-slate-800"
-              >
-                Cancelar
-              </button>
+                class="
+                    w-full
+                    rounded-xl
+                    bg-blue-600
+                    hover:bg-blue-700
+                    active:bg-blue-800
+                    text-white
+                    font-semibold
+                    text-sm
+                    py-3
+                    transition
+                    shadow-sm
+                "
+            >
+                + Registrar nueva sucursal
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MODAL REGISTRAR -->
+    <div
+        id="registerModal"
+        class="
+            hidden
+            fixed
+            inset-0
+            z-[2000]
+            bg-black/40
+            backdrop-blur-sm
+            items-center
+            justify-center
+            p-4
+        "
+    >
+
+        <div
+            class="
+                w-full
+                max-w-lg
+                max-h-[92vh]
+                overflow-y-auto
+                bg-white
+                rounded-2xl
+                shadow-2xl
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    items-center
+                    justify-between
+                    px-5
+                    py-4
+                    border-b
+                    border-slate-200
+                "
+            >
+
+                <div>
+                    <h2 class="font-bold text-lg text-slate-800">
+                        Registrar sucursal
+                    </h2>
+
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Los datos se guardarán en Google Sheets.
+                    </p>
+                </div>
+
+                <button
+                    id="closeRegisterButton"
+                    type="button"
+                    class="
+                        w-8
+                        h-8
+                        rounded-full
+                        hover:bg-slate-100
+                        text-slate-500
+                        text-xl
+                    "
+                >
+                    ×
+                </button>
 
             </div>
 
 
             <form
-              id="branchForm"
-              class="space-y-3"
+                id="registerForm"
+                class="p-5 space-y-4"
             >
 
-              <input
-                id="codigo"
-                type="text"
-                placeholder="Código"
-                required
-                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-              >
+                <!-- Código -->
+                <div>
+                    <label class="form-label">
+                        Código
+                    </label>
 
-              <input
-                id="nombre"
-                type="text"
-                placeholder="Nombre de sucursal"
-                required
-                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-              >
-
-              <select
-                id="negocio"
-                required
-                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white"
-              >
-                <option value="">Seleccionar negocio</option>
-                <option value="Farmacorp">Farmacorp</option>
-                <option value="Amarket">Amarket</option>
-                <option value="Dr. Osvaldo">Dr. Osvaldo</option>
-                <option value="Pizza Hut">Pizza Hut</option>
-              </select>
-
-              <textarea
-                id="direccion"
-                rows="2"
-                placeholder="Dirección"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm resize-none"
-              ></textarea>
-
-
-              <div class="grid grid-cols-2 gap-2">
-
-                <input
-                  id="lat"
-                  type="number"
-                  step="any"
-                  placeholder="Latitud"
-                  required
-                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-                >
-
-                <input
-                  id="lng"
-                  type="number"
-                  step="any"
-                  placeholder="Longitud"
-                  required
-                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-                >
-
-              </div>
-
-
-              <div class="grid grid-cols-2 gap-2">
-
-                <input
-                  id="total_pedidos"
-                  type="number"
-                  min="0"
-                  placeholder="Total pedidos"
-                  value="0"
-                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-                >
-
-                <input
-                  id="pedidos_cancelados"
-                  type="number"
-                  min="0"
-                  placeholder="Cancelados"
-                  value="0"
-                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm"
-                >
-
-              </div>
-
-
-              <!-- ESTADO OPERATIVO -->
-              <div>
-
-                <label class="block text-xs font-semibold text-slate-600 mb-2">
-                  Estado operativo
-                </label>
-
-                <div
-                  id="statusOptions"
-                  class="space-y-2"
-                >
-
-                  <label class="flex items-center gap-2 cursor-pointer">
                     <input
-                      type="radio"
-                      name="statusColor"
-                      value="#9333ea"
-                      checked
+                        name="Codigo"
+                        required
+                        class="form-input"
+                        placeholder="Ej. SCZ-001"
                     >
-
-                    <span class="w-4 h-4 rounded-full" style="background:#9333ea"></span>
-
-                    <span class="text-xs text-slate-600">
-                      Se mantiene
-                    </span>
-                  </label>
+                </div>
 
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                <!-- Nombre -->
+                <div>
+                    <label class="form-label">
+                        Nombre de sucursal
+                    </label>
+
                     <input
-                      type="radio"
-                      name="statusColor"
-                      value="#16a34a"
+                        name="Nombre"
+                        required
+                        class="form-input"
+                        placeholder="Ej. Sucursal Equipetrol"
                     >
-
-                    <span class="w-4 h-4 rounded-full" style="background:#16a34a"></span>
-
-                    <span class="text-xs text-slate-600">
-                      Se mantiene eventualmente
-                    </span>
-                  </label>
+                </div>
 
 
-                  <label class="flex items-center gap-2 cursor-pointer">
+                <!-- Negocio -->
+                <div>
+                    <label class="form-label">
+                        Negocio
+                    </label>
+
+                    <select
+                        name="Negocio"
+                        required
+                        class="form-input"
+                    >
+                        <option value="">Seleccionar...</option>
+                        <option value="Farmacorp">Farmacorp</option>
+                        <option value="Amarket">Amarket</option>
+                        <option value="Dr. Osvaldo">Dr. Osvaldo</option>
+                        <option value="Pizza Hut">Pizza Hut</option>
+                    </select>
+                </div>
+
+
+                <!-- Dirección -->
+                <div>
+                    <label class="form-label">
+                        Dirección
+                    </label>
+
                     <input
-                      type="radio"
-                      name="statusColor"
-                      value="#2563eb"
+                        name="Direccion"
+                        required
+                        class="form-input"
+                        placeholder="Dirección de la sucursal"
                     >
-
-                    <span class="w-4 h-4 rounded-full" style="background:#2563eb"></span>
-
-                    <span class="text-xs text-slate-600">
-                      En observación
-                    </span>
-                  </label>
+                </div>
 
 
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="statusColor"
-                      value="#ea580c"
-                    >
+                <!-- Coordenadas -->
+                <div class="grid grid-cols-2 gap-3">
 
-                    <span class="w-4 h-4 rounded-full" style="background:#ea580c"></span>
+                    <div>
+                        <label class="form-label">
+                            Latitud
+                        </label>
 
-                    <span class="text-xs text-slate-600">
-                      Condicionada
-                    </span>
-                  </label>
+                        <input
+                            name="Latitud"
+                            required
+                            type="number"
+                            step="any"
+                            class="form-input"
+                            placeholder="-17.7833"
+                        >
+                    </div>
 
+                    <div>
+                        <label class="form-label">
+                            Longitud
+                        </label>
 
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="statusColor"
-                      value="#dc2626"
-                    >
-
-                    <span class="w-4 h-4 rounded-full" style="background:#dc2626"></span>
-
-                    <span class="text-xs text-slate-600">
-                      Definitiva eliminación
-                    </span>
-                  </label>
+                        <input
+                            name="Longitud"
+                            required
+                            type="number"
+                            step="any"
+                            class="form-input"
+                            placeholder="-63.1821"
+                        >
+                    </div>
 
                 </div>
 
-              </div>
+
+                <!-- Pedidos -->
+                <div class="grid grid-cols-2 gap-3">
+
+                    <div>
+                        <label class="form-label">
+                            Total pedidos
+                        </label>
+
+                        <input
+                            name="Total_pedidos"
+                            type="number"
+                            min="0"
+                            value="0"
+                            class="form-input"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="form-label">
+                            Pedidos cancelados
+                        </label>
+
+                        <input
+                            name="Pedidos_cancelados"
+                            type="number"
+                            min="0"
+                            value="0"
+                            class="form-input"
+                        >
+                    </div>
+
+                </div>
 
 
-              <button
-                id="saveBtn"
-                type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-3 text-sm transition"
-              >
-                Guardar sucursal
-              </button>
+                <!-- COLOR / ESTADO -->
+                <div>
+
+                    <label class="form-label">
+                        Estado operativo / color del pin
+                    </label>
+
+                    <select
+                        name="Color"
+                        required
+                        class="form-input"
+                    >
+                        <option value="morado">
+                            🟣 Se mantiene
+                        </option>
+
+                        <option value="verde">
+                            🟢 Se mantiene eventualmente
+                        </option>
+
+                        <option value="azul">
+                            🔵 En observación
+                        </option>
+
+                        <option value="naranja">
+                            🟠 Condicionada
+                        </option>
+
+                        <option value="rojo">
+                            🔴 Definitiva eliminación
+                        </option>
+                    </select>
+
+                </div>
+
+
+                <!-- BOTONES -->
+                <div class="flex gap-3 pt-2">
+
+                    <button
+                        id="cancelRegisterButton"
+                        type="button"
+                        class="
+                            flex-1
+                            rounded-xl
+                            border
+                            border-slate-300
+                            py-2.5
+                            text-sm
+                            font-semibold
+                            text-slate-600
+                            hover:bg-slate-50
+                        "
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        id="saveBranchButton"
+                        type="submit"
+                        class="
+                            flex-1
+                            rounded-xl
+                            bg-blue-600
+                            hover:bg-blue-700
+                            text-white
+                            py-2.5
+                            text-sm
+                            font-semibold
+                        "
+                    >
+                        Registrar
+                    </button>
+
+                </div>
+
+                <p
+                    id="formMessage"
+                    class="text-xs text-center hidden"
+                ></p>
 
             </form>
 
-          </section>
-
-
-          <!-- =================================================
-               LISTADO
-          ================================================== -->
-          <section class="border-t border-slate-200 pt-5">
-
-            <div class="flex items-center justify-between mb-3">
-
-              <h2 class="text-sm font-bold text-slate-800">
-                Sucursales visibles
-              </h2>
-
-              <span
-                id="visibleCount"
-                class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full"
-              >
-                0
-              </span>
-
-            </div>
-
-            <div
-              id="branchList"
-              class="space-y-2"
-            ></div>
-
-          </section>
-
         </div>
-
-      </aside>
-
-
-      <!-- =====================================================
-           MAPA
-      ====================================================== -->
-      <section class="relative min-h-0">
-
-        <div id="map"></div>
-
-        <!-- Indicador -->
-        <div
-          class="absolute left-3 top-3 z-[1000] bg-white/95 backdrop-blur rounded-xl shadow-md border border-slate-200 px-3 py-2 text-xs text-slate-600"
-        >
-          Radio de cobertura:
-          <strong>1 km</strong>
-        </div>
-
-      </section>
 
     </div>
-
-  </main>
 
 </div>
 
 
-<!-- =========================================================
-     IFRAME OCULTO PARA POST SIN CORS
-========================================================== -->
-<iframe
-  id="hiddenPostFrame"
-  name="hiddenPostFrame"
-  style="display:none"
-></iframe>
+<style>
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.375rem;
+    }
+
+    .form-input {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        padding: 0.625rem 0.75rem;
+        font-size: 0.875rem;
+        color: #334155;
+        outline: none;
+        background: white;
+    }
+
+    .form-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+</style>
 
 
 <script>
+/* ============================================================
+   CONFIGURACIÓN
+============================================================ */
 
-  /* ==========================================================
-     CONFIGURACIÓN
-  =========================================================== */
-
-  const API_URL =
+const APPS_SCRIPT_URL =
     "https://script.google.com/macros/s/AKfycbz4nNkkW12NPPomEQE5Ns6fjz-nSzQhHHBUKTRB3fZCYDIsjgExttp-7QklO63D6Yh4/exec";
 
-  const STORAGE_KEY = "mapa_logistico_sucursales_v3";
-
-  const MAP_CENTER = [-17.7833, -63.1821];
-
-  const COVERAGE_RADIUS = 1000;
+const MAP_CENTER = [-17.7833, -63.1821];
+const MAP_ZOOM = 13;
 
 
-  /* ==========================================================
-     NEGOCIOS
-  =========================================================== */
+/* ============================================================
+   ESTADOS / COLORES
+   El estado es independiente del negocio.
+============================================================ */
 
-  const BUSINESSES = [
-    "Farmacorp",
-    "Amarket",
-    "Dr. Osvaldo",
-    "Pizza Hut"
-  ];
+const STATUS_CONFIG = {
 
-
-  /* ==========================================================
-     ESTADOS OPERATIVOS
-  =========================================================== */
-
-  const STATUS_CONFIG = {
-
-    "#9333ea": {
-      label: "Se mantiene"
+    morado: {
+        color: "#9333ea",
+        label: "Se mantiene"
     },
 
-    "#16a34a": {
-      label: "Se mantiene eventualmente"
+    verde: {
+        color: "#22c55e",
+        label: "Se mantiene eventualmente"
     },
 
-    "#2563eb": {
-      label: "En observación"
+    azul: {
+        color: "#3b82f6",
+        label: "En observación"
     },
 
-    "#ea580c": {
-      label: "Condicionada (baja demanda pero única en rango geográfico)"
+    naranja: {
+        color: "#f97316",
+        label: "Condicionada"
     },
 
-    "#dc2626": {
-      label: "Definitiva eliminación"
+    rojo: {
+        color: "#dc2626",
+        label: "Definitiva eliminación"
     }
 
-  };
+};
 
 
-  /* ==========================================================
-     ESTADO GLOBAL
-  =========================================================== */
+/* ============================================================
+   VARIABLES GLOBALES
+============================================================ */
 
-  let branches = [];
+let map;
 
-  let filteredBranches = [];
+let markersLayer;
 
-  let editingCode = null;
+let branches = [];
 
-  let markersLayer;
+let currentBusinessFilter = "Todos";
 
-  let coverageCircle = null;
 
-  let searchTimer = null;
+/* ============================================================
+   INICIALIZAR MAPA
+============================================================ */
 
+function initializeMap() {
 
-  /* ==========================================================
-     MAPA
-  =========================================================== */
-
-  const map = L.map("map", {
-    zoomControl: true,
-    preferCanvas: true
-  }).setView(MAP_CENTER, 12);
-
-
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors"
-    }
-  ).addTo(map);
-
-
-  markersLayer = L.layerGroup().addTo(map);
-
-
-  /* ==========================================================
-     ELEMENTOS DOM
-  =========================================================== */
-
-  const branchSearch =
-    document.getElementById("branchSearch");
-
-  const searchResults =
-    document.getElementById("searchResults");
-
-  const clearSearchBtn =
-    document.getElementById("clearSearchBtn");
-
-  const businessFilter =
-    document.getElementById("businessFilter");
-
-  const branchForm =
-    document.getElementById("branchForm");
-
-  const branchList =
-    document.getElementById("branchList");
-
-  const branchCount =
-    document.getElementById("branchCount");
-
-  const businessCount =
-    document.getElementById("businessCount");
-
-  const visibleCount =
-    document.getElementById("visibleCount");
-
-  const connectionText =
-    document.getElementById("connectionText");
-
-  const connectionDot =
-    document.getElementById("connectionDot");
-
-  const connectionStatus =
-    document.getElementById("connectionStatus");
-
-  const refreshBtn =
-    document.getElementById("refreshBtn");
-
-  const formTitle =
-    document.getElementById("formTitle");
-
-  const cancelEditBtn =
-    document.getElementById("cancelEditBtn");
-
-  const saveBtn =
-    document.getElementById("saveBtn");
-
-
-  /* ==========================================================
-     UTILIDADES
-  =========================================================== */
-
-  function escapeHTML(value) {
-
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-
-  }
-
-
-  function normalizeText(value) {
-
-    return String(value ?? "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-
-  }
-
-
-  function toNumber(value, fallback = 0) {
-
-    const number = Number(
-      String(value ?? "")
-        .replace(",", ".")
-        .trim()
-    );
-
-    return Number.isFinite(number)
-      ? number
-      : fallback;
-
-  }
-
-
-  function calculateCancellationRate(total, cancelled) {
-
-    total = toNumber(total);
-    cancelled = toNumber(cancelled);
-
-    if (total <= 0) {
-      return 0;
-    }
-
-    return Number(
-      ((cancelled / total) * 100).toFixed(2)
-    );
-
-  }
-
-
-  function getStatusLabel(color) {
-
-    return STATUS_CONFIG[color]?.label ||
-      "Estado no definido";
-
-  }
-
-
-  function normalizeBranch(raw) {
-
-    const codigo =
-      raw.codigo ??
-      raw.codigoBodega ??
-      "";
-
-    const nombre =
-      raw.nombre ??
-      raw.nombreSucursal ??
-      "";
-
-    const negocio =
-      raw.negocio ??
-      "";
-
-    const direccion =
-      raw.direccion ??
-      "";
-
-    const lat =
-      toNumber(raw.lat);
-
-    const lng =
-      toNumber(raw.lng);
-
-    const total =
-      toNumber(
-        raw.total_pedidos ??
-        raw.pedidosTotal ??
-        0
-      );
-
-    const cancelados =
-      toNumber(
-        raw.pedidos_cancelados ??
-        raw.pedidosCancelados ??
-        0
-      );
-
-    let color =
-      raw.color ||
-      "#9333ea";
-
-    if (!STATUS_CONFIG[color]) {
-      color = "#9333ea";
-    }
-
-    return {
-
-      codigo: String(codigo),
-
-      nombre: String(nombre),
-
-      negocio: String(negocio),
-
-      direccion: String(direccion),
-
-      lat,
-
-      lng,
-
-      total_pedidos: total,
-
-      pedidos_cancelados: cancelados,
-
-      color,
-
-      tasaCancelacion:
-        calculateCancellationRate(
-          total,
-          cancelados
-        )
-
-    };
-
-  }
-
-
-  /* ==========================================================
-     CONEXIÓN / ESTADO
-  =========================================================== */
-
-  function setConnectionStatus(
-    status,
-    message
-  ) {
-
-    connectionText.textContent = message;
-
-    connectionStatus.className =
-      "flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg";
-
-    if (status === "online") {
-
-      connectionStatus.classList.add(
-        "bg-green-50",
-        "text-green-700"
-      );
-
-      connectionDot.className =
-        "w-2.5 h-2.5 rounded-full bg-green-500";
-
-    }
-
-    else if (status === "syncing") {
-
-      connectionStatus.classList.add(
-        "bg-blue-50",
-        "text-blue-700"
-      );
-
-      connectionDot.className =
-        "w-2.5 h-2.5 rounded-full bg-blue-500";
-
-    }
-
-    else {
-
-      connectionStatus.classList.add(
-        "bg-amber-50",
-        "text-amber-700"
-      );
-
-      connectionDot.className =
-        "w-2.5 h-2.5 rounded-full bg-amber-500";
-
-    }
-
-  }
-
-
-  /* ==========================================================
-     LOCAL STORAGE
-  =========================================================== */
-
-  function saveLocalData() {
-
-    try {
-
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(branches)
-      );
-
-    } catch (error) {
-
-      console.warn(
-        "No se pudo guardar LocalStorage:",
-        error
-      );
-
-    }
-
-  }
-
-
-  function loadLocalData() {
-
-    try {
-
-      const saved =
-        localStorage.getItem(STORAGE_KEY);
-
-      if (!saved) {
-        return [];
-      }
-
-      const parsed =
-        JSON.parse(saved);
-
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-
-      return parsed.map(normalizeBranch);
-
-    } catch (error) {
-
-      console.warn(
-        "Error leyendo LocalStorage:",
-        error
-      );
-
-      return [];
-
-    }
-
-  }
-
-
-  /* ==========================================================
-     EXTRACCIÓN DE DATOS DE APPS SCRIPT
-  =========================================================== */
-
-  function extractBranches(data) {
-
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    if (
-      data &&
-      Array.isArray(data.sucursales)
-    ) {
-      return data.sucursales;
-    }
-
-    if (
-      data &&
-      Array.isArray(data.data)
-    ) {
-      return data.data;
-    }
-
-    return [];
-
-  }
-
-
-  /* ==========================================================
-     LECTURA MEDIANTE JSONP
-     
-     Apps Script puede devolver JSONP si su doGet acepta
-     el parámetro "prefix".
-  =========================================================== */
-
-  function fetchJSONP() {
-
-    return new Promise((resolve, reject) => {
-
-      const callbackName =
-        "__mapaLogisticoCallback_" +
-        Date.now() +
-        "_" +
-        Math.floor(Math.random() * 10000);
-
-      const script =
-        document.createElement("script");
-
-      let finished = false;
-
-      const timeout =
-        setTimeout(() => {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          cleanup();
-
-          reject(
-            new Error(
-              "JSONP timeout"
-            )
-          );
-
-        }, 9000);
-
-
-      function cleanup() {
-
-        clearTimeout(timeout);
-
-        try {
-          delete window[callbackName];
-        } catch (e) {
-          window[callbackName] = undefined;
-        }
-
-        script.remove();
-
-      }
-
-
-      window[callbackName] =
-        function(data) {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          cleanup();
-
-          resolve(data);
-
-        };
-
-
-      script.onerror = function() {
-
-        if (finished) {
-          return;
-        }
-
-        finished = true;
-
-        cleanup();
-
-        reject(
-          new Error(
-            "JSONP request failed"
-          )
-        );
-
-      };
-
-
-      script.src =
-        API_URL +
-        "?action=get" +
-        "&prefix=" +
-        encodeURIComponent(callbackName) +
-        "&t=" +
-        Date.now();
-
-      document.head.appendChild(script);
-
+    map = L.map("map", {
+        center: MAP_CENTER,
+        zoom: MAP_ZOOM,
+        zoomControl: true
     });
 
-  }
-
-
-  /* ==========================================================
-     LECTURA MEDIANTE FETCH
-     
-     Se conserva como segundo mecanismo de lectura.
-  =========================================================== */
-
-  async function fetchJSON() {
-
-    const response =
-      await fetch(
-        API_URL +
-        "?action=get&t=" +
-        Date.now(),
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
-          method: "GET",
-          cache: "no-store"
+            maxZoom: 19,
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }
-      );
+    ).addTo(map);
 
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " + response.status
-      );
-
-    }
-
-    return await response.json();
-
-  }
-
-
-  /* ==========================================================
-     CARGAR DESDE GOOGLE SHEETS
-  =========================================================== */
-
-  async function loadFromGoogleSheets() {
-
-    setConnectionStatus(
-      "syncing",
-      "Sincronizando..."
-    );
-
-    let data = null;
-
-
-    /* -----------------------------------------------
-       1. Intentar JSONP
-    ------------------------------------------------ */
-
-    try {
-
-      data = await fetchJSONP();
-
-    } catch (jsonpError) {
-
-      console.warn(
-        "JSONP no disponible. Intentando fetch...",
-        jsonpError
-      );
-
-    }
-
-
-    /* -----------------------------------------------
-       2. Intentar fetch
-    ------------------------------------------------ */
-
-    if (!data) {
-
-      try {
-
-        data = await fetchJSON();
-
-      } catch (fetchError) {
-
-        console.error(
-          "Error de lectura:",
-          fetchError
-        );
-
-        const localData =
-          loadLocalData();
-
-        if (localData.length) {
-
-          branches = localData;
-
-          renderAll();
-
-          setConnectionStatus(
-            "offline",
-            "Modo local"
-          );
-
-          return false;
-
-        }
-
-        branches = [];
-
-        renderAll();
-
-        setConnectionStatus(
-          "offline",
-          "Sin conexión"
-        );
-
-        return false;
-
-      }
-
-    }
-
-
-    const remoteBranches =
-      extractBranches(data)
-        .map(normalizeBranch)
-        .filter(branch =>
-          branch.codigo ||
-          branch.nombre
-        );
-
-
-    branches = remoteBranches;
-
-    saveLocalData();
-
-    renderAll();
-
-    setConnectionStatus(
-      "online",
-      "Google Sheets conectado"
-    );
-
-    return true;
-
-  }
-
-
-  /* ==========================================================
-     ESCRITURA: FETCH NO-CORS
-     
-     No intentamos leer la respuesta porque no-cors produce
-     una respuesta opaca. Lo importante es que el POST llega
-     a doPost() sin preflight CORS.
-  =========================================================== */
-
-  async function sendNoCorsPost(
-    action,
-    branch
-  ) {
-
-    const payload = {
-
-      action,
-
-      codigo: branch.codigo,
-
-      nombre: branch.nombre,
-
-      negocio: branch.negocio,
-
-      direccion: branch.direccion,
-
-      lat: branch.lat,
-
-      lng: branch.lng,
-
-      total_pedidos:
-        branch.total_pedidos,
-
-      pedidos_cancelados:
-        branch.pedidos_cancelados,
-
-      color: branch.color
-
-    };
-
-
-    try {
-
-      await fetch(
-        API_URL,
-        {
-          method: "POST",
-
-          mode: "no-cors",
-
-          headers: {
-            "Content-Type":
-              "text/plain;charset=utf-8"
-          },
-
-          body:
-            JSON.stringify(payload)
-        }
-      );
-
-      return true;
-
-    } catch (error) {
-
-      console.warn(
-        "POST no-cors falló:",
-        error
-      );
-
-      return false;
-
-    }
-
-  }
-
-
-  /* ==========================================================
-     ESCRITURA: IFRAME OCULTO
-     
-     Respaldo compatible con Apps Script que lea
-     e.parameter.payload.
-  =========================================================== */
-
-  function sendIframePost(
-    action,
-    branch
-  ) {
-
-    return new Promise((resolve) => {
-
-      const iframe =
-        document.getElementById(
-          "hiddenPostFrame"
-        );
-
-      const form =
-        document.createElement("form");
-
-      form.method = "POST";
-
-      form.action = API_URL;
-
-      form.target =
-        "hiddenPostFrame";
-
-      form.style.display =
-        "none";
-
-
-      const actionInput =
-        document.createElement("input");
-
-      actionInput.type =
-        "hidden";
-
-      actionInput.name =
-        "action";
-
-      actionInput.value =
-        action;
-
-      form.appendChild(
-        actionInput
-      );
-
-
-      const payloadInput =
-        document.createElement("input");
-
-      payloadInput.type =
-        "hidden";
-
-      payloadInput.name =
-        "payload";
-
-      payloadInput.value =
-        JSON.stringify({
-
-          codigo: branch.codigo,
-
-          nombre: branch.nombre,
-
-          negocio: branch.negocio,
-
-          direccion: branch.direccion,
-
-          lat: branch.lat,
-
-          lng: branch.lng,
-
-          total_pedidos:
-            branch.total_pedidos,
-
-          pedidos_cancelados:
-            branch.pedidos_cancelados,
-
-          color: branch.color
-
-        });
-
-      form.appendChild(
-        payloadInput
-      );
-
-
-      document.body.appendChild(
-        form
-      );
-
-
-      let completed = false;
-
-
-      iframe.onload = function() {
-
-        if (completed) {
-          return;
-        }
-
-        completed = true;
-
-        form.remove();
-
-        resolve(true);
-
-      };
-
-
-      setTimeout(() => {
-
-        if (completed) {
-          return;
-        }
-
-        completed = true;
-
-        form.remove();
-
-        resolve(true);
-
-      }, 3500);
-
-
-      form.submit();
-
-    });
-
-  }
-
-
-  /* ==========================================================
-     SINCRONIZACIÓN DE CAMBIOS
-  =========================================================== */
-
-  async function syncChange(
-    action,
-    branch
-  ) {
-
-    setConnectionStatus(
-      "syncing",
-      "Guardando..."
-    );
-
-
-    /*
-      Primer mecanismo:
-      POST no-cors con JSON.
-
-      Esto es especialmente útil si el doPost()
-      actual procesa e.postData.contents.
-    */
-
-    const sent =
-      await sendNoCorsPost(
-        action,
-        branch
-      );
-
-
-    /*
-      El iframe se ejecuta como respaldo.
-      No se depende de la respuesta para actualizar
-      la interfaz local.
-    */
-
-    if (!sent) {
-
-      await sendIframePost(
-        action,
-        branch
-      );
-
-    }
-
-
-    /*
-      La fuente visual inmediata es LocalStorage.
-      Luego se vuelve a leer Sheets para verificar
-      la sincronización.
-    */
-
-    saveLocalData();
-
-    setConnectionStatus(
-      "syncing",
-      "Verificando..."
-    );
-
+    markersLayer = L.layerGroup().addTo(map);
 
     setTimeout(() => {
+        map.invalidateSize();
+    }, 200);
 
-      loadFromGoogleSheets();
-
-    }, 1200);
-
-  }
+}
 
 
-  /* ==========================================================
-     MARKER HTML
-  =========================================================== */
+/* ============================================================
+   UTILIDADES
+============================================================ */
 
-  function createMarkerIcon(color) {
+function normalizeText(value) {
+
+    return String(value ?? "")
+        .trim()
+        .toLowerCase();
+
+}
+
+
+function getStatusKey(color) {
+
+    const value = normalizeText(color);
+
+    if (STATUS_CONFIG[value]) {
+        return value;
+    }
+
+    /*
+       También aceptamos valores enviados como:
+       Morado, Verde, Azul, Naranja, Rojo
+       o nombres de estados.
+    */
+
+    if (value.includes("morado") || value.includes("mantiene")) {
+        if (value.includes("eventualmente")) {
+            return "verde";
+        }
+
+        return "morado";
+    }
+
+    if (value.includes("verde")) {
+        return "verde";
+    }
+
+    if (value.includes("azul") || value.includes("observ")) {
+        return "azul";
+    }
+
+    if (value.includes("naranja") || value.includes("condicion")) {
+        return "naranja";
+    }
+
+    if (value.includes("rojo") || value.includes("elimin")) {
+        return "rojo";
+    }
+
+    return "morado";
+}
+
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+function numberValue(value) {
+
+    const number = Number(
+        String(value ?? "")
+            .replace(",", ".")
+            .trim()
+    );
+
+    return Number.isFinite(number) ? number : 0;
+}
+
+
+/* ============================================================
+   ICONO DE PIN
+============================================================ */
+
+function createMarkerIcon(color) {
 
     return L.divIcon({
 
-      className: "",
+        className: "",
 
-      html: `
-        <div
-          class="branch-marker"
-          style="background:${escapeHTML(color)}"
-        >
-          <div class="branch-marker-inner"></div>
-        </div>
-      `,
+        html: `
+            <div
+                class="marker-pin"
+                style="background:${color};"
+            >
+                <div class="marker-pin-inner"></div>
+            </div>
+        `,
 
-      iconSize: [30, 30],
+        iconSize: [34, 34],
 
-      iconAnchor: [15, 30],
+        iconAnchor: [17, 34],
 
-      popupAnchor: [0, -30]
+        popupAnchor: [0, -34]
 
     });
 
-  }
+}
 
 
-  /* ==========================================================
-     POPUP
-  =========================================================== */
+/* ============================================================
+   POPUP
+============================================================ */
 
-  function createPopup(branch) {
+function createPopup(branch) {
 
-    const status =
-      getStatusLabel(
-        branch.color
-      );
+    const statusKey = getStatusKey(branch.Color);
 
+    const status = STATUS_CONFIG[statusKey];
 
     return `
-      <div style="min-width:260px">
+        <div style="min-width:220px;">
 
-        <div class="flex items-start justify-between gap-3 mb-3">
-
-          <div>
-            <h3
-              style="
-                margin:0;
-                font-size:16px;
-                font-weight:700;
-                color:#1e293b;
-              "
+            <div
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:8px;
+                    margin-bottom:8px;
+                "
             >
-              ${escapeHTML(branch.nombre)}
-            </h3>
 
-            <p
-              style="
-                margin:3px 0 0;
-                font-size:12px;
-                color:#64748b;
-              "
+                <span
+                    style="
+                        width:12px;
+                        height:12px;
+                        border-radius:50%;
+                        background:${status.color};
+                        display:inline-block;
+                    "
+                ></span>
+
+                <strong
+                    style="
+                        font-size:15px;
+                        color:#1e293b;
+                    "
+                >
+                    ${escapeHTML(branch.Nombre)}
+                </strong>
+
+            </div>
+
+            <div
+                style="
+                    font-size:12px;
+                    color:#64748b;
+                    margin-bottom:10px;
+                "
             >
-              Código: ${escapeHTML(branch.codigo)}
-            </p>
-          </div>
+                ${escapeHTML(branch.Negocio)}
+            </div>
 
-          <span
-            style="
-              display:block;
-              width:14px;
-              height:14px;
-              border-radius:50%;
-              background:${escapeHTML(branch.color)};
-              flex-shrink:0;
-              margin-top:3px;
-            "
-          ></span>
+            <div
+                style="
+                    font-size:12px;
+                    color:#475569;
+                    margin-bottom:10px;
+                "
+            >
+                <strong>Estado:</strong>
+                ${escapeHTML(status.label)}
+            </div>
+
+            <div
+                style="
+                    font-size:12px;
+                    color:#475569;
+                    line-height:1.6;
+                "
+            >
+
+                <div>
+                    <strong>Código:</strong>
+                    ${escapeHTML(branch.Codigo)}
+                </div>
+
+                <div>
+                    <strong>Dirección:</strong>
+                    ${escapeHTML(branch.Direccion)}
+                </div>
+
+                <div>
+                    <strong>Pedidos:</strong>
+                    ${numberValue(branch.Total_pedidos)}
+                </div>
+
+                <div>
+                    <strong>Cancelados:</strong>
+                    ${numberValue(branch.Pedidos_cancelados)}
+                </div>
+
+            </div>
 
         </div>
-
-
-        <div
-          style="
-            font-size:13px;
-            color:#475569;
-            line-height:1.6;
-          "
-        >
-
-          <div>
-            <strong>Negocio:</strong>
-            ${escapeHTML(branch.negocio)}
-          </div>
-
-          <div>
-            <strong>Dirección:</strong>
-            ${escapeHTML(branch.direccion || "No registrada")}
-          </div>
-
-          <div>
-            <strong>Total pedidos:</strong>
-            ${branch.total_pedidos}
-          </div>
-
-          <div>
-            <strong>Pedidos cancelados:</strong>
-            ${branch.pedidos_cancelados}
-          </div>
-
-          <div>
-            <strong>Tasa de cancelación:</strong>
-            ${branch.tasaCancelacion.toFixed(2)}%
-          </div>
-
-          <div style="margin-top:5px">
-            <strong>Estado:</strong>
-            ${escapeHTML(status)}
-          </div>
-
-          <div
-            style="
-              margin-top:10px;
-              padding:8px;
-              background:#f1f5f9;
-              border-radius:8px;
-              text-align:center;
-              font-weight:600;
-              color:#334155;
-            "
-          >
-            Radio de cobertura: 1.000 metros
-          </div>
-
-        </div>
-
-      </div>
     `;
+}
 
-  }
 
+/* ============================================================
+   DIBUJAR MARCADORES
+============================================================ */
 
-  /* ==========================================================
-     DIBUJAR MAPA
-  =========================================================== */
+function renderMarkers() {
 
-  function renderMap() {
+    if (!markersLayer) {
+        return;
+    }
 
     markersLayer.clearLayers();
 
+    const filteredBranches = branches.filter(branch => {
 
-    if (coverageCircle) {
+        if (currentBusinessFilter === "Todos") {
+            return true;
+        }
 
-      map.removeLayer(
-        coverageCircle
-      );
+        return normalizeText(branch.Negocio) ===
+            normalizeText(currentBusinessFilter);
 
-      coverageCircle = null;
-
-    }
-
-
-    if (!filteredBranches.length) {
-
-      map.setView(
-        MAP_CENTER,
-        12
-      );
-
-      return;
-
-    }
-
-
-    const bounds = [];
+    });
 
 
     filteredBranches.forEach(branch => {
 
-      if (
-        !Number.isFinite(branch.lat) ||
-        !Number.isFinite(branch.lng)
-      ) {
-        return;
-      }
+        const lat = numberValue(branch.Latitud);
+        const lng = numberValue(branch.Longitud);
 
+        /*
+           No dibujar coordenadas inválidas.
+        */
 
-      const marker =
-        L.marker(
-          [branch.lat, branch.lng],
-          {
-            icon:
-              createMarkerIcon(
-                branch.color
-              )
-          }
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng) ||
+            lat === 0 ||
+            lng === 0
+        ) {
+            return;
+        }
+
+        const statusKey = getStatusKey(branch.Color);
+
+        const status = STATUS_CONFIG[statusKey];
+
+        const marker = L.marker(
+            [lat, lng],
+            {
+                icon: createMarkerIcon(status.color)
+            }
         );
 
+        marker.bindPopup(
+            createPopup(branch)
+        );
 
-      marker.bindPopup(
-        createPopup(branch),
-        {
-          maxWidth: 360
-        }
-      );
-
-
-      marker.on(
-        "click",
-        function() {
-
-          if (coverageCircle) {
-
-            map.removeLayer(
-              coverageCircle
-            );
-
-          }
-
-
-          coverageCircle =
-            L.circle(
-              [branch.lat, branch.lng],
-              {
-                radius:
-                  COVERAGE_RADIUS,
-
-                color:
-                  branch.color,
-
-                weight: 2,
-
-                fillColor:
-                  branch.color,
-
-                fillOpacity: 0.10,
-
-                interactive: false
-              }
-            ).addTo(map);
-
-
-          map.flyTo(
-            [branch.lat, branch.lng],
-            Math.max(
-              map.getZoom(),
-              14
-            ),
-            {
-              duration: 0.7
-            }
-          );
-
-        }
-      );
-
-
-      marker.addTo(
-        markersLayer
-      );
-
-
-      bounds.push(
-        [branch.lat, branch.lng]
-      );
+        marker.addTo(markersLayer);
 
     });
 
+}
 
-    if (bounds.length === 1) {
 
-      map.setView(
-        bounds[0],
-        14
-      );
+/* ============================================================
+   LISTA DE SUCURSALES
+============================================================ */
 
-    }
+function renderBranchList() {
 
-    else if (bounds.length > 1) {
+    const list = document.getElementById("branchList");
 
-      map.fitBounds(
-        bounds,
-        {
-          padding: [35, 35],
-          maxZoom: 15
-        }
-      );
+    const filteredBranches = branches.filter(branch => {
 
-    }
-
-    else {
-
-      map.setView(
-        MAP_CENTER,
-        12
-      );
-
-    }
-
-  }
-
-
-  /* ==========================================================
-     FILTROS
-  =========================================================== */
-
-  function applyFilters() {
-
-    const business =
-      businessFilter.value;
-
-
-    const search =
-      normalizeText(
-        branchSearch.value
-      );
-
-
-    filteredBranches =
-      branches.filter(branch => {
-
-        const businessMatch =
-          business === "Todos" ||
-          branch.negocio === business;
-
-
-        const searchMatch =
-          !search ||
-          normalizeText(
-            branch.nombre
-          ).includes(search) ||
-          normalizeText(
-            branch.codigo
-          ).includes(search);
-
-
-        return (
-          businessMatch &&
-          searchMatch
-        );
-
-      });
-
-
-    renderMap();
-
-    renderBranchList();
-
-    updateCounters();
-
-  }
-
-
-  /* ==========================================================
-     BUSCADOR
-  =========================================================== */
-
-  function getSearchMatches(query) {
-
-    const normalized =
-      normalizeText(query);
-
-
-    if (!normalized) {
-      return [];
-    }
-
-
-    return branches
-      .filter(branch => {
-
-        return (
-          normalizeText(
-            branch.nombre
-          ).includes(normalized) ||
-
-          normalizeText(
-            branch.codigo
-          ).includes(normalized)
-        );
-
-      })
-      .slice(0, 10);
-
-  }
-
-
-  function renderSearchResults(
-    query
-  ) {
-
-    const matches =
-      getSearchMatches(query);
-
-
-    if (!query.trim()) {
-
-      searchResults.classList.add(
-        "hidden"
-      );
-
-      searchResults.innerHTML = "";
-
-      return;
-
-    }
-
-
-    if (!matches.length) {
-
-      searchResults.innerHTML = `
-        <div class="px-4 py-3 text-sm text-slate-500">
-          No se encontraron sucursales.
-        </div>
-      `;
-
-      searchResults.classList.remove(
-        "hidden"
-      );
-
-      return;
-
-    }
-
-
-    searchResults.innerHTML =
-      matches.map(branch => `
-
-        <button
-          type="button"
-          class="search-result w-full text-left px-4 py-3 border-b border-slate-100 last:border-b-0"
-          data-code="${escapeHTML(branch.codigo)}"
-        >
-
-          <div class="flex items-center gap-3">
-
-            <span
-              class="w-3 h-3 rounded-full shrink-0"
-              style="background:${escapeHTML(branch.color)}"
-            ></span>
-
-            <div class="min-w-0">
-
-              <p class="font-semibold text-sm text-slate-700 truncate">
-                ${escapeHTML(branch.nombre)}
-              </p>
-
-              <p class="text-xs text-slate-400 truncate">
-                ${escapeHTML(branch.codigo)}
-                ·
-                ${escapeHTML(branch.negocio)}
-              </p>
-
-            </div>
-
-          </div>
-
-        </button>
-
-      `).join("");
-
-
-    searchResults.classList.remove(
-      "hidden"
-    );
-
-
-    searchResults
-      .querySelectorAll(
-        ".search-result"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            const code =
-              button.dataset.code;
-
-            focusBranchByCode(
-              code
-            );
-
-            searchResults.classList.add(
-              "hidden"
-            );
-
-          }
-        );
-
-      });
-
-  }
-
-
-  function focusBranchByCode(
-    code
-  ) {
-
-    const branch =
-      branches.find(
-        item =>
-          String(item.codigo) ===
-          String(code)
-      );
-
-
-    if (!branch) {
-      return;
-    }
-
-
-    branchSearch.value =
-      branch.nombre;
-
-
-    clearSearchBtn.classList.remove(
-      "hidden"
-    );
-
-
-    /*
-      No cambiamos el negocio automáticamente.
-      El buscador y el filtro de negocio
-      permanecen conceptualmente separados.
-    */
-
-    if (
-      Number.isFinite(branch.lat) &&
-      Number.isFinite(branch.lng)
-    ) {
-
-      if (coverageCircle) {
-
-        map.removeLayer(
-          coverageCircle
-        );
-
-      }
-
-
-      coverageCircle =
-        L.circle(
-          [branch.lat, branch.lng],
-          {
-            radius:
-              COVERAGE_RADIUS,
-
-            color:
-              branch.color,
-
-            weight: 2,
-
-            fillColor:
-              branch.color,
-
-            fillOpacity: 0.10,
-
-            interactive: false
-          }
-        ).addTo(map);
-
-
-      map.flyTo(
-        [branch.lat, branch.lng],
-        15,
-        {
-          duration: 0.8
-        }
-      );
-
-    }
-
-
-    openBranchPopup(
-      branch
-    );
-
-  }
-
-
-  function openBranchPopup(
-    branch
-  ) {
-
-    let opened = false;
-
-
-    markersLayer.eachLayer(
-      marker => {
-
-        if (
-          marker.getLatLng &&
-          marker.getLatLng().lat === branch.lat &&
-          marker.getLatLng().lng === branch.lng
-        ) {
-
-          marker.openPopup();
-
-          opened = true;
-
+        if (currentBusinessFilter === "Todos") {
+            return true;
         }
 
-      }
-    );
+        return normalizeText(branch.Negocio) ===
+            normalizeText(currentBusinessFilter);
 
+    });
 
-    /*
-      Si el negocio seleccionado ocultó el marcador,
-      mostramos el punto directamente.
-    */
-
-    if (!opened) {
-
-      const tempMarker =
-        L.marker(
-          [branch.lat, branch.lng],
-          {
-            icon:
-              createMarkerIcon(
-                branch.color
-              )
-          }
-        ).addTo(
-          map
-        );
-
-
-      tempMarker
-        .bindPopup(
-          createPopup(branch)
-        )
-        .openPopup();
-
-
-      setTimeout(() => {
-
-        map.removeLayer(
-          tempMarker
-        );
-
-      }, 5000);
-
-    }
-
-  }
-
-
-  branchSearch.addEventListener(
-    "input",
-    function() {
-
-      const value =
-        this.value.trim();
-
-
-      clearSearchBtn.classList.toggle(
-        "hidden",
-        !value
-      );
-
-
-      clearTimeout(
-        searchTimer
-      );
-
-
-      renderSearchResults(
-        value
-      );
-
-
-      searchTimer =
-        setTimeout(() => {
-
-          if (!value) {
-
-            applyFilters();
-
-            return;
-
-          }
-
-
-          const matches =
-            getSearchMatches(value);
-
-
-          /*
-            Si existe una coincidencia exacta,
-            se centra inmediatamente.
-          */
-
-          const exact =
-            matches.find(branch =>
-
-              normalizeText(
-                branch.nombre
-              ) ===
-              normalizeText(value)
-
-              ||
-
-              normalizeText(
-                branch.codigo
-              ) ===
-              normalizeText(value)
-
-            );
-
-
-          /*
-            Si solo existe una coincidencia,
-            también se centra automáticamente.
-          */
-
-          if (
-            exact ||
-            matches.length === 1
-          ) {
-
-            focusBranchByCode(
-              (
-                exact ||
-                matches[0]
-              ).codigo
-            );
-
-          }
-
-          else {
-
-            applyFilters();
-
-          }
-
-        }, 300);
-
-    }
-  );
-
-
-  clearSearchBtn.addEventListener(
-    "click",
-    () => {
-
-      branchSearch.value = "";
-
-      clearSearchBtn.classList.add(
-        "hidden"
-      );
-
-      searchResults.classList.add(
-        "hidden"
-      );
-
-      applyFilters();
-
-      branchSearch.focus();
-
-    }
-  );
-
-
-  document.addEventListener(
-    "click",
-    event => {
-
-      if (
-        !searchResults.contains(event.target) &&
-        event.target !== branchSearch
-      ) {
-
-        searchResults.classList.add(
-          "hidden"
-        );
-
-      }
-
-    }
-  );
-
-
-  businessFilter.addEventListener(
-    "change",
-    applyFilters
-  );
-
-
-  /* ==========================================================
-     LISTADO DE SUCURSALES
-  =========================================================== */
-
-  function renderBranchList() {
 
     if (!filteredBranches.length) {
 
-      branchList.innerHTML = `
-        <div class="text-sm text-slate-400 py-4 text-center">
-          No hay sucursales para mostrar.
-        </div>
-      `;
+        list.innerHTML = `
+            <div
+                class="
+                    rounded-xl
+                    border
+                    border-dashed
+                    border-slate-300
+                    p-5
+                    text-center
+                    text-sm
+                    text-slate-500
+                "
+            >
+                No existen sucursales para este filtro.
+            </div>
+        `;
 
-      return;
+        updateSummary([]);
 
+        return;
     }
 
 
-    branchList.innerHTML =
-      filteredBranches
-        .map(branch => `
+    list.innerHTML = filteredBranches.map(branch => {
 
-          <div
-            class="border border-slate-200 rounded-xl p-3 hover:border-slate-300 transition"
-          >
+        const statusKey = getStatusKey(branch.Color);
 
-            <div class="flex items-start gap-3">
+        const status = STATUS_CONFIG[statusKey];
 
-              <span
-                class="w-3 h-3 rounded-full mt-1 shrink-0"
-                style="background:${escapeHTML(branch.color)}"
-              ></span>
+        return `
+            <button
+                type="button"
+                class="
+                    branch-card
+                    w-full
+                    text-left
+                    rounded-xl
+                    border
+                    border-slate-200
+                    bg-white
+                    hover:bg-slate-50
+                    p-3
+                    transition
+                "
+                data-lat="${escapeHTML(branch.Latitud)}"
+                data-lng="${escapeHTML(branch.Longitud)}"
+            >
 
-              <div class="min-w-0 flex-1">
+                <div class="flex items-start gap-3">
 
-                <button
-                  type="button"
-                  class="text-left w-full"
-                  data-focus="${escapeHTML(branch.codigo)}"
-                >
+                    <span
+                        class="status-dot mt-1"
+                        style="background:${status.color};"
+                    ></span>
 
-                  <p class="font-semibold text-sm text-slate-700 truncate">
-                    ${escapeHTML(branch.nombre)}
-                  </p>
+                    <div class="min-w-0 flex-1">
 
-                  <p class="text-xs text-slate-400 truncate">
-                    ${escapeHTML(branch.codigo)}
-                    ·
-                    ${escapeHTML(branch.negocio)}
-                  </p>
+                        <div class="flex items-center justify-between gap-2">
 
-                </button>
+                            <p
+                                class="
+                                    font-semibold
+                                    text-sm
+                                    text-slate-800
+                                    truncate
+                                "
+                            >
+                                ${escapeHTML(branch.Nombre)}
+                            </p>
 
+                            <span
+                                class="
+                                    text-[10px]
+                                    font-medium
+                                    text-slate-400
+                                    shrink-0
+                                "
+                            >
+                                ${escapeHTML(branch.Codigo)}
+                            </span>
 
-                <div class="flex gap-2 mt-2">
+                        </div>
 
-                  <button
-                    type="button"
-                    class="text-xs text-blue-600 hover:text-blue-800"
-                    data-edit="${escapeHTML(branch.codigo)}"
-                  >
-                    Editar
-                  </button>
+                        <p class="text-xs text-blue-600 mt-0.5">
+                            ${escapeHTML(branch.Negocio)}
+                        </p>
 
-                  <button
-                    type="button"
-                    class="text-xs text-red-600 hover:text-red-800"
-                    data-delete="${escapeHTML(branch.codigo)}"
-                  >
-                    Eliminar
-                  </button>
+                        <p
+                            class="
+                                text-[11px]
+                                text-slate-500
+                                mt-1
+                                line-clamp-2
+                            "
+                        >
+                            ${escapeHTML(branch.Direccion)}
+                        </p>
+
+                        <div
+                            class="
+                                flex
+                                gap-3
+                                mt-2
+                                text-[10px]
+                                text-slate-500
+                            "
+                        >
+                            <span>
+                                Pedidos:
+                                <strong>
+                                    ${numberValue(branch.Total_pedidos)}
+                                </strong>
+                            </span>
+
+                            <span>
+                                Cancelados:
+                                <strong class="text-red-600">
+                                    ${numberValue(branch.Pedidos_cancelados)}
+                                </strong>
+                            </span>
+                        </div>
+
+                        <p
+                            class="text-[10px] mt-1"
+                            style="color:${status.color};"
+                        >
+                            ${escapeHTML(status.label)}
+                        </p>
+
+                    </div>
 
                 </div>
 
-              </div>
+            </button>
+        `;
 
-            </div>
-
-          </div>
-
-        `)
-        .join("");
+    }).join("");
 
 
-    branchList
-      .querySelectorAll(
-        "[data-focus]"
-      )
-      .forEach(button => {
+    document.querySelectorAll(".branch-card").forEach(card => {
 
-        button.addEventListener(
-          "click",
-          () => {
+        card.addEventListener("click", () => {
 
-            focusBranchByCode(
-              button.dataset.focus
+            const lat = numberValue(card.dataset.lat);
+            const lng = numberValue(card.dataset.lng);
+
+            if (!lat || !lng) {
+                return;
+            }
+
+            map.setView(
+                [lat, lng],
+                Math.max(map.getZoom(), 16),
+                {
+                    animate: true
+                }
             );
 
-          }
-        );
+            /*
+               Abrimos el marcador correspondiente.
+            */
 
-      });
+            markersLayer.eachLayer(marker => {
 
+                const position = marker.getLatLng();
 
-    branchList
-      .querySelectorAll(
-        "[data-edit]"
-      )
-      .forEach(button => {
+                if (
+                    Math.abs(position.lat - lat) < 0.000001 &&
+                    Math.abs(position.lng - lng) < 0.000001
+                ) {
+                    marker.openPopup();
+                }
 
-        button.addEventListener(
-          "click",
-          () => {
+            });
 
-            startEdit(
-              button.dataset.edit
-            );
-
-          }
-        );
-
-      });
-
-
-    branchList
-      .querySelectorAll(
-        "[data-delete]"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            deleteBranch(
-              button.dataset.delete
-            );
-
-          }
-        );
-
-      });
-
-  }
-
-
-  /* ==========================================================
-     CONTADORES
-  =========================================================== */
-
-  function updateCounters() {
-
-    branchCount.textContent =
-      branches.length;
-
-
-    const uniqueBusinesses =
-      new Set(
-        branches
-          .map(branch => branch.negocio)
-          .filter(Boolean)
-      );
-
-
-    businessCount.textContent =
-      uniqueBusinesses.size;
-
-
-    visibleCount.textContent =
-      filteredBranches.length;
-
-  }
-
-
-  /* ==========================================================
-     FORMULARIO
-  =========================================================== */
-
-  function getFormData() {
-
-    const selectedColor =
-      document.querySelector(
-        'input[name="statusColor"]:checked'
-      )?.value ||
-      "#9333ea";
-
-
-    return normalizeBranch({
-
-      codigo:
-        document.getElementById(
-          "codigo"
-        ).value.trim(),
-
-      nombre:
-        document.getElementById(
-          "nombre"
-        ).value.trim(),
-
-      negocio:
-        document.getElementById(
-          "negocio"
-        ).value,
-
-      direccion:
-        document.getElementById(
-          "direccion"
-        ).value.trim(),
-
-      lat:
-        document.getElementById(
-          "lat"
-        ).value,
-
-      lng:
-        document.getElementById(
-          "lng"
-        ).value,
-
-      total_pedidos:
-        document.getElementById(
-          "total_pedidos"
-        ).value,
-
-      pedidos_cancelados:
-        document.getElementById(
-          "pedidos_cancelados"
-        ).value,
-
-      color:
-        selectedColor
+        });
 
     });
 
-  }
+
+    updateSummary(filteredBranches);
+
+}
 
 
-  function setFormData(branch) {
+/* ============================================================
+   RESUMEN
+============================================================ */
 
-    document.getElementById(
-      "codigo"
-    ).value =
-      branch.codigo;
+function updateSummary(data) {
 
-    document.getElementById(
-      "nombre"
-    ).value =
-      branch.nombre;
+    const totalBranches = data.length;
 
-    document.getElementById(
-      "negocio"
-    ).value =
-      branch.negocio;
+    const totalOrders = data.reduce(
+        (sum, item) =>
+            sum + numberValue(item.Total_pedidos),
+        0
+    );
 
-    document.getElementById(
-      "direccion"
-    ).value =
-      branch.direccion;
-
-    document.getElementById(
-      "lat"
-    ).value =
-      branch.lat;
-
-    document.getElementById(
-      "lng"
-    ).value =
-      branch.lng;
-
-    document.getElementById(
-      "total_pedidos"
-    ).value =
-      branch.total_pedidos;
-
-    document.getElementById(
-      "pedidos_cancelados"
-    ).value =
-      branch.pedidos_cancelados;
-
-
-    document
-      .querySelectorAll(
-        'input[name="statusColor"]'
-      )
-      .forEach(radio => {
-
-        radio.checked =
-          radio.value ===
-          branch.color;
-
-      });
-
-  }
-
-
-  function clearForm() {
-
-    branchForm.reset();
-
-    document.getElementById(
-      "total_pedidos"
-    ).value = 0;
-
-    document.getElementById(
-      "pedidos_cancelados"
-    ).value = 0;
-
-
-    document
-      .querySelector(
-        'input[name="statusColor"][value="#9333ea"]'
-      )
-      .checked = true;
-
-
-    editingCode = null;
-
-
-    formTitle.textContent =
-      "Nueva sucursal";
-
-
-    cancelEditBtn.classList.add(
-      "hidden"
+    const totalCancelled = data.reduce(
+        (sum, item) =>
+            sum + numberValue(item.Pedidos_cancelados),
+        0
     );
 
 
-    saveBtn.textContent =
-      "Guardar sucursal";
+    document.getElementById("totalBranches").textContent =
+        totalBranches;
 
-  }
+    document.getElementById("totalOrders").textContent =
+        totalOrders;
 
+    document.getElementById("totalCancelled").textContent =
+        totalCancelled;
 
-  function startEdit(code) {
-
-    const branch =
-      branches.find(
-        item =>
-          String(item.codigo) ===
-          String(code)
-      );
+}
 
 
-    if (!branch) {
-      return;
+/* ============================================================
+   NORMALIZAR DATOS DEL SHEETS
+============================================================ */
+
+function normalizeBranch(row) {
+
+    /*
+       Google Sheets puede devolver encabezados con pequeñas
+       diferencias de mayúsculas/minúsculas. Buscamos las
+       columnas de forma tolerante.
+    */
+
+    const get = (name) => {
+
+        const exact = Object.keys(row).find(
+            key => key === name
+        );
+
+        if (exact) {
+            return row[exact];
+        }
+
+        const normalizedTarget =
+            normalizeText(name);
+
+        const key = Object.keys(row).find(
+            key =>
+                normalizeText(key) === normalizedTarget
+        );
+
+        return key ? row[key] : "";
+    };
+
+
+    return {
+
+        Codigo: get("Codigo"),
+
+        Nombre: get("Nombre"),
+
+        Negocio: get("Negocio"),
+
+        Direccion: get("Direccion"),
+
+        Latitud: get("Latitud"),
+
+        Longitud: get("Longitud"),
+
+        Total_pedidos: get("Total_pedidos"),
+
+        Pedidos_cancelados: get("Pedidos_cancelados"),
+
+        Color: get("Color")
+
+    };
+
+}
+
+
+/* ============================================================
+   EXTRAER FILAS DE LA RESPUESTA
+============================================================ */
+
+function extractRows(data) {
+
+    /*
+       Admite varios formatos habituales de Apps Script:
+
+       [
+           {...},
+           {...}
+       ]
+
+       {
+           data: [...]
+       }
+
+       {
+           rows: [...]
+       }
+
+       {
+           values: [...]
+       }
+    */
+
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    if (Array.isArray(data.data)) {
+        return data.data;
+    }
+
+    if (Array.isArray(data.rows)) {
+        return data.rows;
+    }
+
+    if (Array.isArray(data.values)) {
+
+        /*
+           Si Apps Script devuelve una matriz tipo:
+           [
+             ["Codigo", "Nombre", ...],
+             ["001", "Sucursal", ...]
+           ]
+        */
+
+        if (!data.values.length) {
+            return [];
+        }
+
+        const headers = data.values[0];
+
+        return data.values
+            .slice(1)
+            .map(row => {
+
+                const object = {};
+
+                headers.forEach(
+                    (header, index) => {
+                        object[header] =
+                            row[index] ?? "";
+                    }
+                );
+
+                return object;
+
+            });
+    }
+
+    return [];
+}
+
+
+/* ============================================================
+   ESTADO DE CONEXIÓN
+============================================================ */
+
+function setConnectionStatus(
+    connected,
+    message = null
+) {
+
+    const status =
+        document.getElementById("connectionStatus");
+
+    const dot =
+        document.getElementById("connectionDot");
+
+    const text =
+        document.getElementById("connectionText");
+
+
+    if (connected) {
+
+        status.className =
+            "flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full bg-green-50 text-green-700 whitespace-nowrap";
+
+        dot.className =
+            "status-dot bg-green-500";
+
+        text.textContent =
+            message || "Conectado";
+
+    } else {
+
+        status.className =
+            "flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full bg-red-50 text-red-700 whitespace-nowrap";
+
+        dot.className =
+            "status-dot bg-red-500";
+
+        text.textContent =
+            message || "Sin conexión";
+
+    }
+
+}
+
+
+/* ============================================================
+   LECTURA — FETCH
+============================================================ */
+
+async function fetchBranches() {
+
+    /*
+       El parámetro action permite que el Apps Script distinga
+       esta operación si el doGet utiliza acciones.
+    */
+
+    const url =
+        APPS_SCRIPT_URL +
+        "?action=read&_=" +
+        Date.now();
+
+
+    const response =
+        await fetch(
+            url,
+            {
+                method: "GET",
+                cache: "no-store",
+                redirect: "follow"
+            }
+        );
+
+
+    if (!response.ok) {
+        throw new Error(
+            `HTTP ${response.status}`
+        );
     }
 
 
-    editingCode =
-      branch.codigo;
+    const contentType =
+        response.headers.get("content-type") || "";
 
 
-    setFormData(
-      branch
+    const text =
+        await response.text();
+
+
+    /*
+       Algunas implementaciones de Apps Script pueden devolver
+       JSON con content-type text/plain.
+    */
+
+    if (
+        contentType.includes("application/json") ||
+        text.trim().startsWith("{") ||
+        text.trim().startsWith("[")
+    ) {
+
+        return JSON.parse(text);
+
+    }
+
+
+    /*
+       Si el servidor devuelve JSONP accidentalmente, intentamos
+       quitar el envoltorio.
+    */
+
+    const jsonpMatch =
+        text.match(
+            /^[^(]+\(([\s\S]*)\)\s*;?\s*$/
+        );
+
+
+    if (jsonpMatch) {
+        return JSON.parse(jsonpMatch[1]);
+    }
+
+
+    throw new Error(
+        "La respuesta de Google Apps Script no es JSON."
     );
 
-
-    formTitle.textContent =
-      "Editar sucursal";
+}
 
 
-    cancelEditBtn.classList.remove(
-      "hidden"
+/* ============================================================
+   FALLBACK JSONP
+   Útil si fetch GET queda bloqueado por CORS.
+============================================================ */
+
+function fetchBranchesJSONP() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const callbackName =
+                "__sheetsCallback_" +
+                Date.now() +
+                "_" +
+                Math.random()
+                    .toString(36)
+                    .slice(2);
+
+
+            const script =
+                document.createElement("script");
+
+
+            let finished = false;
+
+
+            const cleanup = () => {
+
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+
+                try {
+                    delete window[callbackName];
+                } catch (error) {
+                    window[callbackName] = undefined;
+                }
+
+            };
+
+
+            const timer =
+                setTimeout(() => {
+
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+                    cleanup();
+
+                    reject(
+                        new Error(
+                            "Tiempo de espera agotado al consultar Google Sheets."
+                        )
+                    );
+
+                }, 15000);
+
+
+            window[callbackName] =
+                data => {
+
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+                    clearTimeout(timer);
+
+                    cleanup();
+
+                    resolve(data);
+
+                };
+
+
+            script.onerror = () => {
+
+                if (finished) {
+                    return;
+                }
+
+                finished = true;
+
+                clearTimeout(timer);
+
+                cleanup();
+
+                reject(
+                    new Error(
+                        "JSONP no disponible en el Apps Script."
+                    )
+                );
+
+            };
+
+
+            script.src =
+                APPS_SCRIPT_URL +
+                "?action=read" +
+                "&callback=" +
+                encodeURIComponent(callbackName) +
+                "&_=" +
+                Date.now();
+
+
+            document.body.appendChild(script);
+
+        }
     );
 
-
-    saveBtn.textContent =
-      "Actualizar sucursal";
+}
 
 
-    document
-      .querySelector("aside")
-      .scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
+/* ============================================================
+   CARGAR SUCURSALES
+============================================================ */
 
-  }
+async function loadBranches() {
 
-
-  cancelEditBtn.addEventListener(
-    "click",
-    clearForm
-  );
+    const list =
+        document.getElementById("branchList");
 
 
-  branchForm.addEventListener(
-    "submit",
-    async function(event) {
-
-      event.preventDefault();
-
-
-      const branch =
-        getFormData();
-
-
-      if (!branch.codigo) {
-
-        alert(
-          "El código es obligatorio."
-        );
-
-        return;
-
-      }
-
-
-      if (!branch.nombre) {
-
-        alert(
-          "El nombre de la sucursal es obligatorio."
-        );
-
-        return;
-
-      }
+    list.innerHTML = `
+        <div
+            class="
+                rounded-xl
+                border
+                border-slate-200
+                p-4
+                flex
+                items-center
+                justify-center
+                gap-2
+                text-sm
+                text-slate-500
+            "
+        >
+            <span class="loading-spinner"></span>
+            Consultando Google Sheets...
+        </div>
+    `;
 
 
-      if (!branch.negocio) {
+    try {
 
-        alert(
-          "Selecciona el negocio."
-        );
-
-        return;
-
-      }
+        let data;
 
 
-      if (
-        !Number.isFinite(branch.lat) ||
-        !Number.isFinite(branch.lng)
-      ) {
+        /*
+           Primero usamos fetch.
+        */
 
-        alert(
-          "Ingresa coordenadas válidas."
-        );
+        try {
 
-        return;
+            data =
+                await fetchBranches();
 
-      }
+        } catch (fetchError) {
 
+            console.warn(
+                "Fetch bloqueado. Intentando JSONP...",
+                fetchError
+            );
 
-      const exists =
-        branches.some(
-          item =>
-            String(item.codigo) ===
-              String(branch.codigo) &&
-            String(item.codigo) !==
-              String(editingCode)
-        );
+            /*
+               Fallback para instalaciones de Apps Script que
+               implementen callback en doGet.
+            */
 
-
-      if (exists) {
-
-        alert(
-          "Ya existe una sucursal con ese código."
-        );
-
-        return;
-
-      }
-
-
-      const action =
-        editingCode
-          ? "update"
-          : "create";
-
-
-      if (editingCode) {
-
-        const index =
-          branches.findIndex(
-            item =>
-              String(item.codigo) ===
-              String(editingCode)
-          );
-
-
-        if (index !== -1) {
-
-          branches[index] =
-            branch;
+            data =
+                await fetchBranchesJSONP();
 
         }
 
-      }
 
-      else {
+        const rows =
+            extractRows(data);
 
-        branches.push(
-          branch
+
+        branches =
+            rows.map(normalizeBranch);
+
+
+        setConnectionStatus(
+            true,
+            "Conectado"
         );
 
-      }
+
+        renderMarkers();
+
+        renderBranchList();
 
 
-      saveLocalData();
+    } catch (error) {
 
-      clearForm();
+        console.error(
+            "Error cargando Google Sheets:",
+            error
+        );
 
-      renderAll();
 
-      await syncChange(
-        action,
-        branch
-      );
+        setConnectionStatus(
+            false,
+            "Error de conexión"
+        );
+
+
+        list.innerHTML = `
+            <div
+                class="
+                    rounded-xl
+                    border
+                    border-red-200
+                    bg-red-50
+                    p-4
+                "
+            >
+
+                <p
+                    class="
+                        text-sm
+                        font-semibold
+                        text-red-700
+                    "
+                >
+                    No se pudieron cargar las sucursales.
+                </p>
+
+                <p
+                    class="
+                        text-xs
+                        text-red-600
+                        mt-1
+                        leading-relaxed
+                    "
+                >
+                    Verifica que el Google Apps Script esté
+                    implementado como aplicación web y que
+                    permita acceso a cualquier usuario.
+                </p>
+
+                <button
+                    id="retryButton"
+                    type="button"
+                    class="
+                        mt-3
+                        text-xs
+                        font-semibold
+                        text-red-700
+                        underline
+                    "
+                >
+                    Intentar nuevamente
+                </button>
+
+            </div>
+        `;
+
+
+        document
+            .getElementById("retryButton")
+            ?.addEventListener(
+                "click",
+                loadBranches
+            );
 
     }
-  );
+
+}
 
 
-  /* ==========================================================
-     ELIMINAR
-  =========================================================== */
+/* ============================================================
+   ESCRITURA EN GOOGLE SHEETS
+============================================================ */
 
-  async function deleteBranch(code) {
+async function saveBranchToSheets(branch) {
 
-    const branch =
-      branches.find(
-        item =>
-          String(item.codigo) ===
-          String(code)
-      );
+    /*
+       IMPORTANTE:
 
+       NO usamos:
 
-    if (!branch) {
-      return;
-    }
+           Content-Type: application/json
 
+       porque eso puede provocar preflight OPTIONS/CORS.
 
-    const confirmed =
-      confirm(
-        `¿Deseas eliminar la sucursal "${branch.nombre}"?`
-      );
+       URLSearchParams genera:
 
+           application/x-www-form-urlencoded
 
-    if (!confirmed) {
-      return;
-    }
+       y evita el preflight en este caso.
+    */
+
+    const body =
+        new URLSearchParams();
 
 
-    branches =
-      branches.filter(
-        item =>
-          String(item.codigo) !==
-          String(code)
-      );
-
-
-    saveLocalData();
-
-    renderAll();
-
-
-    await syncChange(
-      "delete",
-      branch
+    body.append(
+        "action",
+        "create"
     );
 
-  }
+
+    body.append(
+        "Codigo",
+        branch.Codigo
+    );
+
+    body.append(
+        "Nombre",
+        branch.Nombre
+    );
+
+    body.append(
+        "Negocio",
+        branch.Negocio
+    );
+
+    body.append(
+        "Direccion",
+        branch.Direccion
+    );
+
+    body.append(
+        "Latitud",
+        branch.Latitud
+    );
+
+    body.append(
+        "Longitud",
+        branch.Longitud
+    );
+
+    body.append(
+        "Total_pedidos",
+        branch.Total_pedidos
+    );
+
+    body.append(
+        "Pedidos_cancelados",
+        branch.Pedidos_cancelados
+    );
+
+    body.append(
+        "Color",
+        branch.Color
+    );
 
 
-  /* ==========================================================
-     RENDER GENERAL
-  =========================================================== */
-
-  function renderAll() {
-
-    applyFilters();
-
-  }
-
-
-  /* ==========================================================
-     MAPA RESPONSIVE
-  =========================================================== */
-
-  function refreshMapSize() {
-
-    setTimeout(() => {
-
-      map.invalidateSize({
-        pan: false
-      });
-
-    }, 150);
-
-  }
+    const response =
+        await fetch(
+            APPS_SCRIPT_URL,
+            {
+                method: "POST",
+                body,
+                redirect: "follow"
+            }
+        );
 
 
-  window.addEventListener(
-    "resize",
-    refreshMapSize
-  );
+    if (!response.ok) {
+
+        throw new Error(
+            `HTTP ${response.status}`
+        );
+
+    }
 
 
-  window.addEventListener(
-    "orientationchange",
-    refreshMapSize
-  );
+    /*
+       No dependemos de que el servidor devuelva JSON.
+       Apps Script puede responder text/plain.
+    */
+
+    return true;
+
+}
 
 
-  /* ==========================================================
-     ACTUALIZAR MANUALMENTE
-  =========================================================== */
+/* ============================================================
+   FALLBACK DE ESCRITURA POR FORMULARIO
+============================================================ */
 
-  refreshBtn.addEventListener(
-    "click",
-    async () => {
+function saveBranchByHiddenForm(branch) {
 
-      refreshBtn.disabled =
+    return new Promise(
+        (resolve, reject) => {
+
+            /*
+               El formulario se envía a un iframe oculto.
+               Esto evita que el navegador necesite leer la
+               respuesta de Apps Script y, por tanto, evita
+               problemas de CORS durante el envío.
+            */
+
+            const iframeName =
+                "appsScriptFrame_" +
+                Date.now();
+
+
+            const iframe =
+                document.createElement("iframe");
+
+            iframe.name =
+                iframeName;
+
+            iframe.style.display =
+                "none";
+
+
+            document.body.appendChild(
+                iframe
+            );
+
+
+            const form =
+                document.createElement("form");
+
+            form.method =
+                "POST";
+
+            form.action =
+                APPS_SCRIPT_URL;
+
+            form.target =
+                iframeName;
+
+            form.style.display =
+                "none";
+
+
+            const fields = {
+
+                action: "create",
+
+                Codigo: branch.Codigo,
+
+                Nombre: branch.Nombre,
+
+                Negocio: branch.Negocio,
+
+                Direccion: branch.Direccion,
+
+                Latitud: branch.Latitud,
+
+                Longitud: branch.Longitud,
+
+                Total_pedidos:
+                    branch.Total_pedidos,
+
+                Pedidos_cancelados:
+                    branch.Pedidos_cancelados,
+
+                Color: branch.Color
+
+            };
+
+
+            Object.entries(fields)
+                .forEach(
+                    ([name, value]) => {
+
+                        const input =
+                            document.createElement(
+                                "input"
+                            );
+
+                        input.type =
+                            "hidden";
+
+                        input.name =
+                            name;
+
+                        input.value =
+                            value ?? "";
+
+                        form.appendChild(
+                            input
+                        );
+
+                    }
+                );
+
+
+            document.body.appendChild(
+                form
+            );
+
+
+            let completed = false;
+
+
+            const cleanup = () => {
+
+                setTimeout(() => {
+
+                    form.remove();
+
+                    iframe.remove();
+
+                }, 1000);
+
+            };
+
+
+            iframe.onload = () => {
+
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+
+                cleanup();
+
+                resolve(true);
+
+            };
+
+
+            /*
+               Si el iframe no dispara onload correctamente,
+               damos un margen suficiente para que Apps Script
+               procese el POST.
+            */
+
+            setTimeout(() => {
+
+                if (completed) {
+                    return;
+                }
+
+                completed = true;
+
+                cleanup();
+
+                resolve(true);
+
+            }, 4000);
+
+
+            form.submit();
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   REGISTRAR NUEVA SUCURSAL
+============================================================ */
+
+async function registerBranch(branch) {
+
+    /*
+       Intentamos primero fetch POST.
+    */
+
+    try {
+
+        await saveBranchToSheets(branch);
+
+        return true;
+
+    } catch (fetchError) {
+
+        console.warn(
+            "POST fetch bloqueado. Usando formulario oculto.",
+            fetchError
+        );
+
+
+        /*
+           Fallback sin lectura de respuesta.
+        */
+
+        await saveBranchByHiddenForm(
+            branch
+        );
+
+        return true;
+
+    }
+
+}
+
+
+/* ============================================================
+   MODAL
+============================================================ */
+
+function openRegisterModal() {
+
+    const modal =
+        document.getElementById(
+            "registerModal"
+        );
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+    modal.classList.add(
+        "flex"
+    );
+
+
+    document
+        .querySelector(
+            '#registerForm input[name="Codigo"]'
+        )
+        ?.focus();
+
+}
+
+
+function closeRegisterModal() {
+
+    const modal =
+        document.getElementById(
+            "registerModal"
+        );
+
+    modal.classList.add(
+        "hidden"
+    );
+
+    modal.classList.remove(
+        "flex"
+    );
+
+}
+
+
+/* ============================================================
+   MENSAJES DEL FORMULARIO
+============================================================ */
+
+function showFormMessage(
+    message,
+    type = "info"
+) {
+
+    const element =
+        document.getElementById(
+            "formMessage"
+        );
+
+
+    element.textContent =
+        message;
+
+
+    element.classList.remove(
+        "hidden",
+        "text-red-600",
+        "text-green-600",
+        "text-slate-500"
+    );
+
+
+    if (type === "error") {
+
+        element.classList.add(
+            "text-red-600"
+        );
+
+    } else if (type === "success") {
+
+        element.classList.add(
+            "text-green-600"
+        );
+
+    } else {
+
+        element.classList.add(
+            "text-slate-500"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   EVENTO FORMULARIO
+============================================================ */
+
+async function handleRegisterSubmit(event) {
+
+    event.preventDefault();
+
+
+    const form =
+        event.currentTarget;
+
+
+    const button =
+        document.getElementById(
+            "saveBranchButton"
+        );
+
+
+    const originalText =
+        button.textContent;
+
+
+    const formData =
+        new FormData(form);
+
+
+    const branch = {
+
+        Codigo:
+            String(
+                formData.get("Codigo") || ""
+            ).trim(),
+
+        Nombre:
+            String(
+                formData.get("Nombre") || ""
+            ).trim(),
+
+        Negocio:
+            String(
+                formData.get("Negocio") || ""
+            ).trim(),
+
+        Direccion:
+            String(
+                formData.get("Direccion") || ""
+            ).trim(),
+
+        Latitud:
+            String(
+                formData.get("Latitud") || ""
+            ).trim(),
+
+        Longitud:
+            String(
+                formData.get("Longitud") || ""
+            ).trim(),
+
+        Total_pedidos:
+            String(
+                formData.get("Total_pedidos") || "0"
+            ).trim(),
+
+        Pedidos_cancelados:
+            String(
+                formData.get("Pedidos_cancelados") || "0"
+            ).trim(),
+
+        Color:
+            String(
+                formData.get("Color") || ""
+            ).trim()
+
+    };
+
+
+    /*
+       Validación básica de coordenadas.
+    */
+
+    const lat =
+        numberValue(branch.Latitud);
+
+    const lng =
+        numberValue(branch.Longitud);
+
+
+    if (
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+    ) {
+
+        showFormMessage(
+            "La latitud o longitud no es válida.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    button.disabled =
         true;
 
-      refreshBtn.textContent =
-        "Actualizando...";
+    button.textContent =
+        "Registrando...";
 
 
-      try {
+    showFormMessage(
+        "Enviando datos a Google Sheets...",
+        "info"
+    );
 
-        await loadFromGoogleSheets();
 
-      } finally {
+    try {
 
-        refreshBtn.disabled =
-          false;
+        await registerBranch(
+            branch
+        );
 
-        refreshBtn.textContent =
-          "Actualizar";
 
-        refreshMapSize();
+        showFormMessage(
+            "Sucursal registrada correctamente.",
+            "success"
+        );
 
-      }
+
+        /*
+           Actualización optimista:
+           mostramos inmediatamente la nueva sucursal.
+        */
+
+        branches.push(
+            branch
+        );
+
+
+        renderMarkers();
+
+        renderBranchList();
+
+
+        setConnectionStatus(
+            true,
+            "Conectado"
+        );
+
+
+        setTimeout(
+            () => {
+
+                form.reset();
+
+                closeRegisterModal();
+
+                /*
+                   Volvemos a consultar Sheets para obtener
+                   la versión definitiva.
+                */
+
+                loadBranches();
+
+            },
+            900
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Error registrando sucursal:",
+            error
+        );
+
+
+        showFormMessage(
+            "No se pudo registrar la sucursal. Revisa la configuración del Apps Script.",
+            "error"
+        );
+
+
+    } finally {
+
+        button.disabled =
+            false;
+
+        button.textContent =
+            originalText;
 
     }
-  );
+
+}
 
 
-  /* ==========================================================
-     INICIALIZACIÓN
-  =========================================================== */
+/* ============================================================
+   EVENTOS
+============================================================ */
 
-  async function init() {
-
-    /*
-      Primero mostramos inmediatamente
-      lo que exista en LocalStorage.
-    */
-
-    branches =
-      loadLocalData();
-
-
-    renderAll();
-
-
-    refreshMapSize();
-
+function setupEvents() {
 
     /*
-      Después intentamos cargar
-      la información real de Sheets.
+       Filtro de negocio.
     */
 
-    await loadFromGoogleSheets();
+    document
+        .getElementById("businessFilter")
+        .addEventListener(
+            "change",
+            event => {
 
+                currentBusinessFilter =
+                    event.target.value;
 
-    refreshMapSize();
+                renderMarkers();
+
+                renderBranchList();
+
+            }
+        );
 
 
     /*
-      Segundo invalidateSize después
-      de que el navegador haya terminado
-      de calcular dimensiones.
+       Actualizar.
     */
 
-    setTimeout(
-      refreshMapSize,
-      500
+    document
+        .getElementById("refreshButton")
+        .addEventListener(
+            "click",
+            loadBranches
+        );
+
+
+    /*
+       Abrir modal.
+    */
+
+    document
+        .getElementById("openRegisterButton")
+        .addEventListener(
+            "click",
+            openRegisterModal
+        );
+
+
+    /*
+       Cerrar modal.
+    */
+
+    document
+        .getElementById("closeRegisterButton")
+        .addEventListener(
+            "click",
+            closeRegisterModal
+        );
+
+
+    document
+        .getElementById("cancelRegisterButton")
+        .addEventListener(
+            "click",
+            closeRegisterModal
+        );
+
+
+    /*
+       Click fuera del modal.
+    */
+
+    document
+        .getElementById("registerModal")
+        .addEventListener(
+            "click",
+            event => {
+
+                if (
+                    event.target.id ===
+                    "registerModal"
+                ) {
+                    closeRegisterModal();
+                }
+
+            }
+        );
+
+
+    /*
+       Formulario.
+    */
+
+    document
+        .getElementById("registerForm")
+        .addEventListener(
+            "submit",
+            handleRegisterSubmit
+        );
+
+
+    /*
+       Escape para cerrar modal.
+    */
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Escape"
+            ) {
+                closeRegisterModal();
+            }
+
+        }
     );
 
-
-    setTimeout(
-      refreshMapSize,
-      1500
-    );
-
-  }
+}
 
 
-  init();
+/* ============================================================
+   INICIO
+============================================================ */
 
-
-  /* ==========================================================
-     SINCRONIZACIÓN AUTOMÁTICA
-  =========================================================== */
-
-  setInterval(
+document.addEventListener(
+    "DOMContentLoaded",
     () => {
 
-      /*
-        No interrumpimos una edición activa.
-      */
+        initializeMap();
 
-      if (!editingCode) {
+        setupEvents();
 
-        loadFromGoogleSheets();
+        loadBranches();
 
-      }
-
-    },
-    30000
-  );
+    }
+);
 
 </script>
 
 </body>
 </html>
+```
