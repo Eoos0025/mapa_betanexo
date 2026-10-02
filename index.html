@@ -1654,6 +1654,9 @@ let map = null;
 
 let markersLayer = null;
 
+/* Círculos de cobertura de 1 km por sucursal */
+let coverageLayer = null;
+
 let loadTimeout = null;
 
 
@@ -1760,6 +1763,14 @@ function initializeMap() {
     ).addTo(map);
 
     markersLayer =
+        L.layerGroup().addTo(map);
+
+    /*
+     * Capa independiente para los círculos de cobertura.
+     * Se mantiene separada de los marcadores para poder
+     * sincronizar ambos elementos con los filtros.
+     */
+    coverageLayer =
         L.layerGroup().addTo(map);
 
 }
@@ -2548,10 +2559,15 @@ function renderMarkers() {
 
     markersLayer.clearLayers();
 
+    if (coverageLayer) {
+        coverageLayer.clearLayers();
+    }
+
 
     filteredBranches.forEach(
         branch => {
 
+            /* Marcador de la sucursal */
             const marker =
                 createMarker(
                     branch
@@ -2559,6 +2575,31 @@ function renderMarkers() {
 
             marker.addTo(
                 markersLayer
+            );
+
+            /*
+             * Cobertura geográfica de exactamente 1 km
+             * alrededor de la misma coordenada del marcador.
+             */
+            const coverageCircle =
+                L.circle(
+                    [
+                        branch.lat,
+                        branch.lng
+                    ],
+                    {
+                        radius: 1000,
+                        color: "#64748b",
+                        weight: 1.5,
+                        opacity: 0.65,
+                        fillColor: "#94a3b8",
+                        fillOpacity: 0.12,
+                        interactive: false
+                    }
+                );
+
+            coverageCircle.addTo(
+                coverageLayer
             );
 
         }
@@ -3040,8 +3081,19 @@ function focusBranch(
     );
 
 
+    /*
+     * Los círculos están en una capa independiente, por lo que
+     * aquí solo buscamos el marcador para abrir su popup.
+     */
     markersLayer.eachLayer(
         marker => {
+
+            if (
+                !marker.getLatLng ||
+                !marker.openPopup
+            ) {
+                return;
+            }
 
             const position =
                 marker.getLatLng();
