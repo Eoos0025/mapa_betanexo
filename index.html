@@ -306,6 +306,30 @@
             color: #374151;
         }
 
+        .status-filter-button {
+            width: 100%;
+            padding: 5px 7px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            background: transparent;
+            text-align: left;
+            transition: 0.15s ease;
+        }
+
+        .status-filter-button:hover {
+            background: #f3f4f6;
+        }
+
+        .status-filter-button.active {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+            box-shadow: inset 3px 0 0 currentColor;
+        }
+
+        .status-filter-button.all-statuses {
+            font-weight: 700;
+        }
+
         .legend-color {
             width: 14px;
             height: 14px;
@@ -317,32 +341,6 @@
 
             box-shadow:
                 0 0 0 1px rgba(0, 0, 0, 0.18);
-        }
-
-        /* Filtros interactivos de estado operativo */
-        .status-filter {
-            width: 100%;
-            border: 0;
-            background: transparent;
-            padding: 6px 7px;
-            border-radius: 7px;
-            text-align: left;
-            cursor: pointer;
-            transition: background 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .status-filter:hover {
-            background: #f3f4f6;
-        }
-
-        .status-filter.active {
-            background: #eef2ff;
-            box-shadow: inset 0 0 0 1px #dbeafe;
-            font-weight: 800;
-        }
-
-        .legend-all-color {
-            background: linear-gradient(135deg, #9333ea 0%, #16a34a 25%, #2563eb 50%, #ea580c 75%, #dc2626 100%);
         }
 
         /* =========================================================
@@ -1006,99 +1004,34 @@
 
                 <div class="legend">
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter active"
-                        data-status="Todos">
-
-                        <span
-                            class="legend-color legend-all-color">
-                        </span>
-
-                        <span>
-                            Todos los estados
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button all-statuses active" data-status="all" aria-pressed="true">
+                        <span class="legend-color" style="background:#111827"></span>
+                        <span>Todos los estados</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter"
-                        data-status="#9333ea">
-
-                        <span
-                            class="legend-color"
-                            style="background:#9333ea">
-                        </span>
-
-                        <span>
-                            Se mantiene
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button" data-status="#9333ea" aria-pressed="false">
+                        <span class="legend-color" style="background:#9333ea"></span>
+                        <span>Se mantiene</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter"
-                        data-status="#16a34a">
-
-                        <span
-                            class="legend-color"
-                            style="background:#16a34a">
-                        </span>
-
-                        <span>
-                            Se mantiene eventualmente
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button" data-status="#16a34a" aria-pressed="false">
+                        <span class="legend-color" style="background:#16a34a"></span>
+                        <span>Se mantiene eventualmente</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter"
-                        data-status="#2563eb">
-
-                        <span
-                            class="legend-color"
-                            style="background:#2563eb">
-                        </span>
-
-                        <span>
-                            En observación
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button" data-status="#2563eb" aria-pressed="false">
+                        <span class="legend-color" style="background:#2563eb"></span>
+                        <span>En observación</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter"
-                        data-status="#ea580c">
-
-                        <span
-                            class="legend-color"
-                            style="background:#ea580c">
-                        </span>
-
-                        <span>
-                            Condicionada
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button" data-status="#ea580c" aria-pressed="false">
+                        <span class="legend-color" style="background:#ea580c"></span>
+                        <span>Condicionada</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="legend-item status-filter"
-                        data-status="#dc2626">
-
-                        <span
-                            class="legend-color"
-                            style="background:#dc2626">
-                        </span>
-
-                        <span>
-                            Definitiva eliminación
-                        </span>
-
+                    <button type="button" class="legend-item status-filter-button" data-status="#dc2626" aria-pressed="false">
+                        <span class="legend-color" style="background:#dc2626"></span>
+                        <span>Definitiva eliminación</span>
                     </button>
 
                 </div>
@@ -1704,8 +1637,7 @@ let filteredBranches = [];
 
 let selectedBusiness = "Todos";
 
-/* Filtro de estado operativo. "Todos" no restringe por estado. */
-let selectedStatus = "Todos";
+let selectedStatuses = new Set();
 
 let editingCode = null;
 
@@ -1713,7 +1645,6 @@ let map = null;
 
 let markersLayer = null;
 
-/* Círculos de cobertura de 1 km por sucursal */
 let coverageLayer = null;
 
 let loadTimeout = null;
@@ -1824,11 +1755,6 @@ function initializeMap() {
     markersLayer =
         L.layerGroup().addTo(map);
 
-    /*
-     * Capa independiente para los círculos de cobertura.
-     * Se mantiene separada de los marcadores para poder
-     * sincronizar ambos elementos con los filtros.
-     */
     coverageLayer =
         L.layerGroup().addTo(map);
 
@@ -1907,39 +1833,30 @@ function initializeEvents() {
 
     /*
      * Filtros de estado operativo.
-     * Se combinan con el filtro de negocio mediante AND.
+     * Se pueden seleccionar varios estados a la vez.
+     * Si no hay ninguno seleccionado, se muestran todos.
      */
 
     document
-        .querySelectorAll(".status-filter")
+        .querySelectorAll(".status-filter-button")
         .forEach(button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+            button.addEventListener("click", () => {
 
-                    document
-                        .querySelectorAll(".status-filter")
-                        .forEach(item => {
+                const status = button.dataset.status;
 
-                            item.classList.remove(
-                                "active"
-                            );
-
-                        });
-
-                    button.classList.add(
-                        "active"
-                    );
-
-                    selectedStatus =
-                        button.dataset.status ||
-                        "Todos";
-
-                    applyFilters();
-
+                if (status === "all") {
+                    selectedStatuses.clear();
+                } else if (selectedStatuses.has(status)) {
+                    selectedStatuses.delete(status);
+                } else {
+                    selectedStatuses.add(status);
                 }
-            );
+
+                updateStatusFilterUI();
+                applyFilters();
+
+            });
 
         });
 
@@ -2615,56 +2532,61 @@ function showConnectionError(
 
 function applyFilters() {
 
-    /*
-     * Filtro combinado AND:
-     * 1) negocio seleccionado
-     * 2) estado operativo seleccionado
-     */
-
     filteredBranches =
-        branches.filter(
-            branch => {
+        branches.filter(branch => {
 
-                const businessMatches =
-                    selectedBusiness === "Todos" ||
-                    String(branch.negocio || "")
-                        .trim()
-                        .toLowerCase() ===
-                    selectedBusiness
-                        .trim()
-                        .toLowerCase();
+            const businessMatches =
+                selectedBusiness === "Todos" ||
+                String(branch.negocio || "")
+                    .toLowerCase() ===
+                selectedBusiness.toLowerCase();
 
-                const branchColor =
-                    normalizeColor(
-                        branch.color
-                    );
-
-                const statusMatches =
-                    selectedStatus === "Todos" ||
-                    branchColor ===
-                    normalizeColor(
-                        selectedStatus
-                    );
-
-                return (
-                    businessMatches &&
-                    statusMatches
+            const statusMatches =
+                selectedStatuses.size === 0 ||
+                selectedStatuses.has(
+                    normalizeColor(branch.color)
                 );
 
-            }
-        );
+            return businessMatches && statusMatches;
 
+        });
 
-    /*
-     * Los tres elementos se actualizan con el mismo conjunto
-     * filtrado: pines, círculos de 1 km y lista/resumen.
-     */
 
     renderMarkers();
 
     renderBranchList();
 
     updateStatistics();
+
+}
+
+
+function updateStatusFilterUI() {
+
+    const allSelected =
+        selectedStatuses.size === 0;
+
+    document
+        .querySelectorAll(".status-filter-button")
+        .forEach(button => {
+
+            const status = button.dataset.status;
+            const active =
+                status === "all"
+                    ? allSelected
+                    : selectedStatuses.has(status);
+
+            button.classList.toggle(
+                "active",
+                active
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                active ? "true" : "false"
+            );
+
+        });
 
 }
 
@@ -2689,7 +2611,24 @@ function renderMarkers() {
     filteredBranches.forEach(
         branch => {
 
-            /* Marcador de la sucursal */
+            const circle =
+                L.circle(
+                    [branch.lat, branch.lng],
+                    {
+                        radius: 1000,
+                        color: "#64748b",
+                        weight: 1.5,
+                        opacity: 0.55,
+                        fillColor: "#60a5fa",
+                        fillOpacity: 0.12,
+                        interactive: false
+                    }
+                );
+
+            if (coverageLayer) {
+                circle.addTo(coverageLayer);
+            }
+
             const marker =
                 createMarker(
                     branch
@@ -2697,31 +2636,6 @@ function renderMarkers() {
 
             marker.addTo(
                 markersLayer
-            );
-
-            /*
-             * Cobertura geográfica de exactamente 1 km
-             * alrededor de la misma coordenada del marcador.
-             */
-            const coverageCircle =
-                L.circle(
-                    [
-                        branch.lat,
-                        branch.lng
-                    ],
-                    {
-                        radius: 1000,
-                        color: "#64748b",
-                        weight: 1.5,
-                        opacity: 0.65,
-                        fillColor: "#94a3b8",
-                        fillOpacity: 0.12,
-                        interactive: false
-                    }
-                );
-
-            coverageCircle.addTo(
-                coverageLayer
             );
 
         }
@@ -3203,19 +3117,8 @@ function focusBranch(
     );
 
 
-    /*
-     * Los círculos están en una capa independiente, por lo que
-     * aquí solo buscamos el marcador para abrir su popup.
-     */
     markersLayer.eachLayer(
         marker => {
-
-            if (
-                !marker.getLatLng ||
-                !marker.openPopup
-            ) {
-                return;
-            }
 
             const position =
                 marker.getLatLng();
