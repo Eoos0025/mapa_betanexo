@@ -319,6 +319,32 @@
                 0 0 0 1px rgba(0, 0, 0, 0.18);
         }
 
+        /* Filtros interactivos de estado operativo */
+        .status-filter {
+            width: 100%;
+            border: 0;
+            background: transparent;
+            padding: 6px 7px;
+            border-radius: 7px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .status-filter:hover {
+            background: #f3f4f6;
+        }
+
+        .status-filter.active {
+            background: #eef2ff;
+            box-shadow: inset 0 0 0 1px #dbeafe;
+            font-weight: 800;
+        }
+
+        .legend-all-color {
+            background: linear-gradient(135deg, #9333ea 0%, #16a34a 25%, #2563eb 50%, #ea580c 75%, #dc2626 100%);
+        }
+
         /* =========================================================
            ESTADÍSTICAS
         ========================================================== */
@@ -980,7 +1006,25 @@
 
                 <div class="legend">
 
-                    <div class="legend-item">
+                    <button
+                        type="button"
+                        class="legend-item status-filter active"
+                        data-status="Todos">
+
+                        <span
+                            class="legend-color legend-all-color">
+                        </span>
+
+                        <span>
+                            Todos los estados
+                        </span>
+
+                    </button>
+
+                    <button
+                        type="button"
+                        class="legend-item status-filter"
+                        data-status="#9333ea">
 
                         <span
                             class="legend-color"
@@ -991,9 +1035,12 @@
                             Se mantiene
                         </span>
 
-                    </div>
+                    </button>
 
-                    <div class="legend-item">
+                    <button
+                        type="button"
+                        class="legend-item status-filter"
+                        data-status="#16a34a">
 
                         <span
                             class="legend-color"
@@ -1004,9 +1051,12 @@
                             Se mantiene eventualmente
                         </span>
 
-                    </div>
+                    </button>
 
-                    <div class="legend-item">
+                    <button
+                        type="button"
+                        class="legend-item status-filter"
+                        data-status="#2563eb">
 
                         <span
                             class="legend-color"
@@ -1017,9 +1067,12 @@
                             En observación
                         </span>
 
-                    </div>
+                    </button>
 
-                    <div class="legend-item">
+                    <button
+                        type="button"
+                        class="legend-item status-filter"
+                        data-status="#ea580c">
 
                         <span
                             class="legend-color"
@@ -1030,9 +1083,12 @@
                             Condicionada
                         </span>
 
-                    </div>
+                    </button>
 
-                    <div class="legend-item">
+                    <button
+                        type="button"
+                        class="legend-item status-filter"
+                        data-status="#dc2626">
 
                         <span
                             class="legend-color"
@@ -1043,7 +1099,7 @@
                             Definitiva eliminación
                         </span>
 
-                    </div>
+                    </button>
 
                 </div>
 
@@ -1648,6 +1704,9 @@ let filteredBranches = [];
 
 let selectedBusiness = "Todos";
 
+/* Filtro de estado operativo. "Todos" no restringe por estado. */
+let selectedStatus = "Todos";
+
 let editingCode = null;
 
 let map = null;
@@ -1837,6 +1896,45 @@ function initializeEvents() {
 
                     selectedBusiness =
                         button.dataset.business;
+
+                    applyFilters();
+
+                }
+            );
+
+        });
+
+
+    /*
+     * Filtros de estado operativo.
+     * Se combinan con el filtro de negocio mediante AND.
+     */
+
+    document
+        .querySelectorAll(".status-filter")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    document
+                        .querySelectorAll(".status-filter")
+                        .forEach(item => {
+
+                            item.classList.remove(
+                                "active"
+                            );
+
+                        });
+
+                    button.classList.add(
+                        "active"
+                    );
+
+                    selectedStatus =
+                        button.dataset.status ||
+                        "Todos";
 
                     applyFilters();
 
@@ -2517,26 +2615,50 @@ function showConnectionError(
 
 function applyFilters() {
 
-    if (
-        selectedBusiness === "Todos"
-    ) {
+    /*
+     * Filtro combinado AND:
+     * 1) negocio seleccionado
+     * 2) estado operativo seleccionado
+     */
 
-        filteredBranches =
-            [...branches];
+    filteredBranches =
+        branches.filter(
+            branch => {
 
-    } else {
-
-        filteredBranches =
-            branches.filter(
-                branch =>
-                    branch.negocio
+                const businessMatches =
+                    selectedBusiness === "Todos" ||
+                    String(branch.negocio || "")
+                        .trim()
                         .toLowerCase() ===
                     selectedBusiness
-                        .toLowerCase()
-            );
+                        .trim()
+                        .toLowerCase();
 
-    }
+                const branchColor =
+                    normalizeColor(
+                        branch.color
+                    );
 
+                const statusMatches =
+                    selectedStatus === "Todos" ||
+                    branchColor ===
+                    normalizeColor(
+                        selectedStatus
+                    );
+
+                return (
+                    businessMatches &&
+                    statusMatches
+                );
+
+            }
+        );
+
+
+    /*
+     * Los tres elementos se actualizan con el mismo conjunto
+     * filtrado: pines, círculos de 1 km y lista/resumen.
+     */
 
     renderMarkers();
 
