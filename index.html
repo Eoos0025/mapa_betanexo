@@ -55,6 +55,7 @@
         /* =========================================================
            PANEL LATERAL
         ========================================================== */
+
         .sidebar {
             width: 390px;
             min-width: 390px;
@@ -163,24 +164,32 @@
         .button {
             border: none;
             border-radius: 8px;
+
             padding: 10px 13px;
+
             font-size: 12px;
             font-weight: 700;
+
             transition:
                 background 0.15s ease,
                 transform 0.15s ease;
         }
+
         .button:hover {
             transform: translateY(-1px);
         }
+
         .button:active {
             transform: translateY(0);
         }
+
         .button-primary {
             width: 100%;
+
             background: #111827;
             color: #ffffff;
         }
+
         .button-primary:hover {
             background: #1f2937;
         }
@@ -240,6 +249,17 @@
             gap: 7px;
         }
 
+        .filter-panels {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(130px, 0.75fr);
+            gap: 10px;
+            align-items: start;
+        }
+
+        .filter-panel {
+            min-width: 0;
+        }
+
         .legend-item {
             display: flex;
             align-items: center;
@@ -249,29 +269,101 @@
             color: #374151;
         }
 
-        .status-filter-button {
+        .filter-button {
             width: 100%;
-            padding: 5px 7px;
-            border: 1px solid transparent;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
             border-radius: 7px;
-            background: transparent;
-            text-align: left;
-            transition: 0.15s ease;
-        }
-
-        .status-filter-button:hover {
-            background: #f3f4f6;
-        }
-
-        .status-filter-button.active {
-            background: #f3f4f6;
-            border-color: #d1d5db;
-            box-shadow: inset 3px 0 0 currentColor;
-        }
-
-        .status-filter-button.all-statuses {
+            background: #fff;
+            color: #374151;
+            font-size: 10px;
             font-weight: 700;
+            text-align: left;
+            transition: .15s ease;
         }
+
+        .filter-button:hover { background: #f3f4f6; }
+
+        .filter-button.active {
+            background: #111827;
+            border-color: #111827;
+            color: #fff;
+        }
+
+        .filter-check {
+            width: 13px;
+            height: 13px;
+            border: 1px solid #9ca3af;
+            border-radius: 3px;
+            background: #fff;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .filter-button.active .filter-check {
+            border-color: #fff;
+            background: #fff;
+        }
+
+        .filter-button.active .filter-check::after {
+            content: "✓";
+            position: absolute;
+            color: #111827;
+            font-size: 10px;
+            font-weight: 900;
+            left: 2px;
+            top: -1px;
+        }
+
+        .compact-filter-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 5px;
+        }
+
+        .coverage-control {
+            padding: 9px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .coverage-row {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            font-size:10px;
+            color:#4b5563;
+        }
+
+        #radiusSlider { width:100%; margin:7px 0 0; }
+
+        #radiusValue { font-size:11px; font-weight:800; color:#111827; }
+
+        .aggregator-options {
+            display:grid;
+            grid-template-columns:repeat(3, minmax(0,1fr));
+            gap:6px;
+        }
+
+        .aggregator-option {
+            display:flex;
+            align-items:center;
+            gap:5px;
+            padding:7px;
+            border:1px solid #e5e7eb;
+            border-radius:7px;
+            font-size:10px;
+            font-weight:700;
+            cursor:pointer;
+        }
+
+        .aggregator-option input { margin:0; }
 
         .legend-color {
             width: 14px;
@@ -729,6 +821,10 @@
                 min-width: 330px;
             }
 
+            .filter-panels {
+                grid-template-columns: 1fr;
+            }
+
         }
 
         @media (max-width: 700px) {
@@ -936,49 +1032,46 @@
             </section>
 
             <!-- =================================================
-                 LEYENDA
+                 FILTROS OPERATIVOS Y AGREGADORES
             ================================================== -->
 
             <section class="section">
 
-                <h2 class="section-title">
-                    Estado operativo
-                </h2>
+                <div class="filter-panels">
 
-                <div class="legend">
+                    <div class="filter-panel">
+                        <h2 class="section-title">Estado operativo</h2>
+                        <div class="compact-filter-list">
+                            <button type="button" class="filter-button status-filter-button" data-status="all" aria-pressed="true">
+                                <span class="filter-check"></span> Todos los estados
+                            </button>
+                            <button type="button" class="filter-button status-filter-button" data-status="#9333ea" aria-pressed="false"><span class="filter-check"></span><span class="legend-color" style="background:#9333ea"></span>Se mantiene</button>
+                            <button type="button" class="filter-button status-filter-button" data-status="#16a34a" aria-pressed="false"><span class="filter-check"></span><span class="legend-color" style="background:#16a34a"></span>Se mantiene eventualmente</button>
+                            <button type="button" class="filter-button status-filter-button" data-status="#2563eb" aria-pressed="false"><span class="filter-check"></span><span class="legend-color" style="background:#2563eb"></span>En observación</button>
+                            <button type="button" class="filter-button status-filter-button" data-status="#ea580c" aria-pressed="false"><span class="filter-check"></span><span class="legend-color" style="background:#ea580c"></span>Condicionada</button>
+                            <button type="button" class="filter-button status-filter-button" data-status="#dc2626" aria-pressed="false"><span class="filter-check"></span><span class="legend-color" style="background:#dc2626"></span>Definitiva eliminación</button>
+                        </div>
+                    </div>
 
-                    <button type="button" class="legend-item status-filter-button all-statuses active" data-status="all" aria-pressed="true">
-                        <span class="legend-color" style="background:#111827"></span>
-                        <span>Todos los estados</span>
-                    </button>
-
-                    <button type="button" class="legend-item status-filter-button" data-status="#9333ea" aria-pressed="false">
-                        <span class="legend-color" style="background:#9333ea"></span>
-                        <span>Se mantiene</span>
-                    </button>
-
-                    <button type="button" class="legend-item status-filter-button" data-status="#16a34a" aria-pressed="false">
-                        <span class="legend-color" style="background:#16a34a"></span>
-                        <span>Se mantiene eventualmente</span>
-                    </button>
-
-                    <button type="button" class="legend-item status-filter-button" data-status="#2563eb" aria-pressed="false">
-                        <span class="legend-color" style="background:#2563eb"></span>
-                        <span>En observación</span>
-                    </button>
-
-                    <button type="button" class="legend-item status-filter-button" data-status="#ea580c" aria-pressed="false">
-                        <span class="legend-color" style="background:#ea580c"></span>
-                        <span>Condicionada</span>
-                    </button>
-
-                    <button type="button" class="legend-item status-filter-button" data-status="#dc2626" aria-pressed="false">
-                        <span class="legend-color" style="background:#dc2626"></span>
-                        <span>Definitiva eliminación</span>
-                    </button>
+                    <div class="filter-panel">
+                        <h2 class="section-title">Agregador</h2>
+                        <div class="compact-filter-list">
+                            <button type="button" class="filter-button aggregator-filter-button" data-aggregator="PedidosYA" aria-pressed="false"><span class="filter-check"></span>PedidosYA</button>
+                            <button type="button" class="filter-button aggregator-filter-button" data-aggregator="Yango" aria-pressed="false"><span class="filter-check"></span>Yango</button>
+                            <button type="button" class="filter-button aggregator-filter-button" data-aggregator="Sin agregador" aria-pressed="false"><span class="filter-check"></span>Sin agregador</button>
+                        </div>
+                    </div>
 
                 </div>
 
+            </section>
+
+            <section class="section">
+                <h2 class="section-title">Radio de cobertura</h2>
+                <div class="coverage-control">
+                    <div class="coverage-row"><span>Radio de sucursales</span><strong id="radiusValue">1 km</strong></div>
+                    <input id="radiusSlider" type="range" min="1" max="5" step="1" value="1" aria-label="Radio de cobertura en kilómetros">
+                </div>
             </section>
 
             <!-- =================================================
@@ -1343,6 +1436,19 @@
                     </div>
 
                     <!-- =================================================
+                         AGREGADORES
+                    ================================================== -->
+
+                    <div class="form-group full">
+                        <label class="form-label">Agregadores</label>
+                        <div class="aggregator-options">
+                            <label class="aggregator-option"><input type="checkbox" name="agregadores" value="PedidosYA"> PedidosYA</label>
+                            <label class="aggregator-option"><input type="checkbox" name="agregadores" value="Yango"> Yango</label>
+                            <label class="aggregator-option"><input type="checkbox" name="agregadores" value="Sin agregador"> Sin agregador</label>
+                        </div>
+                    </div>
+
+                    <!-- =================================================
                          COLOR / ESTADO
                     ================================================== -->
 
@@ -1582,13 +1688,17 @@ let selectedBusiness = "Todos";
 
 let selectedStatuses = new Set();
 
+let selectedAggregators = new Set();
+
+let coverageRadiusKm = 1;
+
+let coverageLayer = null;
+
 let editingCode = null;
 
 let map = null;
 
 let markersLayer = null;
-
-let coverageLayer = null;
 
 let loadTimeout = null;
 
@@ -1659,6 +1769,8 @@ document.addEventListener(
 
         }, 1000);
 
+        updateStatusFilterUI();
+        updateAggregatorFilterUI();
         loadBranches();
 
     }
@@ -1775,34 +1887,41 @@ function initializeEvents() {
 
 
     /*
-     * Filtros de estado operativo.
-     * Se pueden seleccionar varios estados a la vez.
-     * Si no hay ninguno seleccionado, se muestran todos.
+     * Filtros múltiples de estado operativo.
      */
-
-    document
-        .querySelectorAll(".status-filter-button")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                const status = button.dataset.status;
-
-                if (status === "all") {
-                    selectedStatuses.clear();
-                } else if (selectedStatuses.has(status)) {
-                    selectedStatuses.delete(status);
-                } else {
-                    selectedStatuses.add(status);
-                }
-
-                updateStatusFilterUI();
-                applyFilters();
-
-            });
-
+    document.querySelectorAll(".status-filter-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const value = button.dataset.status;
+            if (value === "all") {
+                selectedStatuses.clear();
+            } else {
+                if (selectedStatuses.has(value)) selectedStatuses.delete(value);
+                else selectedStatuses.add(value);
+            }
+            updateStatusFilterUI();
+            applyFilters();
         });
+    });
 
+    /*
+     * Filtros múltiples de agregador.
+     */
+    document.querySelectorAll(".aggregator-filter-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const value = button.dataset.aggregator;
+            if (selectedAggregators.has(value)) selectedAggregators.delete(value);
+            else selectedAggregators.add(value);
+            updateAggregatorFilterUI();
+            applyFilters();
+        });
+    });
+
+    const radiusSlider = document.getElementById("radiusSlider");
+    radiusSlider.addEventListener("input", () => {
+        coverageRadiusKm = Number(radiusSlider.value);
+        document.getElementById("radiusValue").textContent = coverageRadiusKm + " km";
+        updateCoverageCircles();
+    });
 
     /*
      * Nuevo.
@@ -2231,6 +2350,11 @@ function normalizeBranch(
                 row.direccion ?? ""
             ).trim(),
 
+        agregadores:
+            normalizeAggregators(
+                row.agregadores ?? row.aggregador ?? row.aggregators ?? ""
+            ),
+
         lat:
             parseCoordinate(
                 row.lat
@@ -2268,6 +2392,50 @@ function normalizeBranch(
 
 }
 
+
+/* ================================================================
+   AGREGADORES
+================================================================ */
+
+function normalizeAggregators(value) {
+    if (Array.isArray(value)) {
+        return [...new Set(value.map(v => String(v).trim()).filter(Boolean))];
+    }
+    if (value === null || value === undefined || String(value).trim() === "") return [];
+    let raw = String(value).trim();
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return normalizeAggregators(parsed);
+    } catch (_) {}
+    return [...new Set(raw.split(/[,;|]/).map(v => v.trim()).filter(Boolean))];
+}
+
+function formatAggregators(value) {
+    const items = normalizeAggregators(value);
+    return items.length ? items.join(", ") : "Sin agregador";
+}
+
+function updateStatusFilterUI() {
+    document.querySelectorAll(".status-filter-button").forEach(button => {
+        const value = button.dataset.status;
+        const active = value === "all" ? selectedStatuses.size === 0 : selectedStatuses.has(value);
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+    });
+}
+
+function updateAggregatorFilterUI() {
+    document.querySelectorAll(".aggregator-filter-button").forEach(button => {
+        const active = selectedAggregators.has(button.dataset.aggregator);
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+    });
+}
+
+function updateCoverageCircles() {
+    if (!coverageLayer) return;
+    coverageLayer.eachLayer(circle => circle.setRadius(coverageRadiusKm * 1000));
+}
 
 /* ================================================================
    NÚMEROS
@@ -2474,63 +2642,17 @@ function showConnectionError(
 ================================================================ */
 
 function applyFilters() {
-
-    filteredBranches =
-        branches.filter(branch => {
-
-            const businessMatches =
-                selectedBusiness === "Todos" ||
-                String(branch.negocio || "")
-                    .toLowerCase() ===
-                selectedBusiness.toLowerCase();
-
-            const statusMatches =
-                selectedStatuses.size === 0 ||
-                selectedStatuses.has(
-                    normalizeColor(branch.color)
-                );
-
-            return businessMatches && statusMatches;
-
-        });
-
+    filteredBranches = branches.filter(branch => {
+        const businessMatch = selectedBusiness === "Todos" || branch.negocio.toLowerCase() === selectedBusiness.toLowerCase();
+        const statusMatch = selectedStatuses.size === 0 || selectedStatuses.has(normalizeColor(branch.color));
+        const branchAggregators = normalizeAggregators(branch.agregadores);
+        const aggregatorMatch = selectedAggregators.size === 0 || [...selectedAggregators].some(value => branchAggregators.includes(value));
+        return businessMatch && statusMatch && aggregatorMatch;
+    });
 
     renderMarkers();
-
     renderBranchList();
-
     updateStatistics();
-
-}
-
-
-function updateStatusFilterUI() {
-
-    const allSelected =
-        selectedStatuses.size === 0;
-
-    document
-        .querySelectorAll(".status-filter-button")
-        .forEach(button => {
-
-            const status = button.dataset.status;
-            const active =
-                status === "all"
-                    ? allSelected
-                    : selectedStatuses.has(status);
-
-            button.classList.toggle(
-                "active",
-                active
-            );
-
-            button.setAttribute(
-                "aria-pressed",
-                active ? "true" : "false"
-            );
-
-        });
-
 }
 
 
@@ -2545,31 +2667,21 @@ function renderMarkers() {
     }
 
     markersLayer.clearLayers();
-
-    if (coverageLayer) {
-        coverageLayer.clearLayers();
-    }
-
+    if (coverageLayer) coverageLayer.clearLayers();
 
     filteredBranches.forEach(
         branch => {
 
-            const circle =
-                L.circle(
-                    [branch.lat, branch.lng],
-                    {
-                        radius: 1000,
-                        color: "#64748b",
-                        weight: 1.5,
-                        opacity: 0.55,
-                        fillColor: "#60a5fa",
-                        fillOpacity: 0.12,
-                        interactive: false
-                    }
-                );
-
             if (coverageLayer) {
-                circle.addTo(coverageLayer);
+                L.circle([branch.lat, branch.lng], {
+                    radius: coverageRadiusKm * 1000,
+                    color: "#64748b",
+                    weight: 1.25,
+                    fillColor: "#60a5fa",
+                    fillOpacity: 0.12,
+                    opacity: 0.65,
+                    interactive: false
+                }).addTo(coverageLayer);
             }
 
             const marker =
@@ -2732,6 +2844,22 @@ function createMarker(
 
                 ${escapeHtml(
                     branch.negocio
+                )}
+
+            </div>
+
+            <div
+                style="
+                    margin-top:5px;
+                    font-size:11px;
+                ">
+
+                <strong>
+                    Agregadores:
+                </strong>
+
+                ${escapeHtml(
+                    formatAggregators(branch.agregadores)
                 )}
 
             </div>
@@ -2953,6 +3081,10 @@ function renderBranchList() {
                                         branch.negocio
                                     )}
 
+                                </div>
+
+                                <div class="branch-address">
+                                    Agregadores: <strong>${escapeHtml(formatAggregators(branch.agregadores))}</strong>
                                 </div>
 
                                 <div
@@ -3272,6 +3404,10 @@ function openEditModal(
     ).value =
         branch.pedidos_cancelados;
 
+    document.querySelectorAll('input[name="agregadores"]').forEach(input => {
+        input.checked = normalizeAggregators(branch.agregadores).includes(input.value);
+    });
+
 
     const radio =
         document.querySelector(
@@ -3387,6 +3523,11 @@ function handleFormSubmit(
                 formData.get(
                     "pedidos_cancelados"
                 )
+            ),
+
+        agregadores:
+            normalizeAggregators(
+                formData.getAll("agregadores")
             ),
 
         /*
@@ -3566,6 +3707,9 @@ function submitBranch(
 
         pedidos_cancelados:
             data.pedidos_cancelados,
+
+        agregadores:
+            JSON.stringify(data.agregadores || []),
 
         color:
             data.color
