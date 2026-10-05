@@ -2398,9 +2398,16 @@ function normalizeBranch(
                 row.direccion ?? ""
             ).trim(),
 
+        // Google Sheets devuelve la columna exactamente como "agregador".
+        // Se conserva también como agregadores para compatibilidad con los filtros.
+        agregador:
+            String(
+                row.agregador ?? row.agregadores ?? row.aggregators ?? ""
+            ).trim(),
+
         agregadores:
             normalizeAggregators(
-                row.agregadores ?? row.aggregador ?? row.aggregators ?? ""
+                row.agregador ?? row.agregadores ?? row.aggregators ?? ""
             ),
 
         lat:
@@ -2444,6 +2451,17 @@ function normalizeBranch(
 /* ================================================================
    AGREGADORES
 ================================================================ */
+
+function normalizeAggregatorName(value) {
+    if (value === null || value === undefined) return "";
+    const text = String(value).trim();
+    if (!text) return "";
+    const normalized = text.toLowerCase().replace(/\s+/g, "");
+    if (normalized === "pedidosya" || normalized === "pedidosya.com") return "PedidosYA";
+    if (normalized === "yango") return "Yango";
+    if (normalized === "sinagregador" || normalized === "ninguno") return "";
+    return text;
+}
 
 function normalizeAggregators(value) {
     if (Array.isArray(value)) {
@@ -2693,8 +2711,12 @@ function applyFilters() {
     filteredBranches = branches.filter(branch => {
         const businessMatch = selectedBusiness === "Todos" || branch.negocio.toLowerCase() === selectedBusiness.toLowerCase();
         const statusMatch = selectedStatuses.size === 0 || selectedStatuses.has(normalizeColor(branch.color));
-        const branchAggregators = normalizeAggregators(branch.agregadores);
-        const aggregatorMatch = selectedAggregators.size === 0 || [...selectedAggregators].some(value => branchAggregators.includes(value));
+        const branchAggregators = normalizeAggregators(branch.agregador);
+        const hasNoAggregator = branchAggregators.length === 0;
+        const aggregatorMatch = selectedAggregators.size === 0 || [...selectedAggregators].some(value => {
+            if (value === "Sin agregador") return hasNoAggregator;
+            return branchAggregators.includes(normalizeAggregatorName(value));
+        });
         return businessMatch && statusMatch && aggregatorMatch;
     });
 
@@ -2907,7 +2929,7 @@ function createMarker(
                 </strong>
 
                 ${escapeHtml(
-                    formatAggregators(branch.agregadores)
+                    formatAggregators(branch.agregador)
                 )}
 
             </div>
@@ -3132,7 +3154,7 @@ function renderBranchList() {
                                 </div>
 
                                 <div class="branch-address">
-                                    Agregadores: <strong>${escapeHtml(formatAggregators(branch.agregadores))}</strong>
+                                    Agregadores: <strong>${escapeHtml(formatAggregators(branch.agregador))}</strong>
                                 </div>
 
                                 <div
@@ -3453,7 +3475,7 @@ function openEditModal(
         branch.pedidos_cancelados;
 
     document.querySelectorAll('input[name="agregadores"]').forEach(input => {
-        input.checked = normalizeAggregators(branch.agregadores).includes(input.value);
+        input.checked = normalizeAggregators(branch.agregador).includes(normalizeAggregatorName(input.value));
     });
 
 
@@ -3573,10 +3595,13 @@ function handleFormSubmit(
                 )
             ),
 
-        agregadores:
-            normalizeAggregators(
-                formData.getAll("agregadores")
-            ),
+        agregador:
+            formData
+                .getAll("agregadores")
+                .filter(value => value !== "Sin agregador")
+                .map(normalizeAggregatorName)
+                .filter(Boolean)
+                .join(", "),
 
         /*
          * EL COLOR ES SELECCIONADO MANUALMENTE.
@@ -3756,8 +3781,8 @@ function submitBranch(
         pedidos_cancelados:
             data.pedidos_cancelados,
 
-        agregadores:
-            JSON.stringify(data.agregadores || []),
+        agregador:
+            data.agregador || "",
 
         color:
             data.color
