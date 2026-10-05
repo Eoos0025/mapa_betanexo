@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Mapa Logístico | Santa Cruz de la Sierra</title>
+
     <!-- =========================================================
          LEAFLET
     ========================================================== -->
@@ -12,13 +14,16 @@
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         crossorigin=""
     >
+
     <style>
         /* =========================================================
            RESET / BASE
         ========================================================== */
+
         * {
             box-sizing: border-box;
         }
+
         html,
         body {
             width: 100%;
@@ -35,23 +40,28 @@
             color: #111827;
             overflow: hidden;
         }
+
         button,
         input,
         select {
             font: inherit;
         }
+
         button {
             cursor: pointer;
         }
+
         /* =========================================================
            APLICACIÓN
         ========================================================== */
+
         .app {
             display: flex;
             width: 100%;
             height: 100vh;
             overflow: hidden;
         }
+
         /* =========================================================
            PANEL LATERAL
         ========================================================== */
@@ -60,107 +70,145 @@
             width: 390px;
             min-width: 390px;
             height: 100vh;
+
             display: flex;
             flex-direction: column;
+
             background: #ffffff;
             border-right: 1px solid #e5e7eb;
+
             box-shadow: 3px 0 16px rgba(0, 0, 0, 0.08);
+
             position: relative;
             z-index: 1000;
         }
+
         .sidebar-header {
             flex-shrink: 0;
+
             padding: 17px 18px;
+
             border-bottom: 1px solid #e5e7eb;
             background: #ffffff;
         }
+
         .header-row {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 10px;
         }
+
         .title {
             margin: 0;
+
             font-size: 21px;
             line-height: 1.2;
             font-weight: 800;
             color: #111827;
         }
+
         .subtitle {
             margin: 5px 0 0;
+
             font-size: 12px;
             color: #6b7280;
         }
+
         /* =========================================================
            ESTADO DE CONEXIÓN
         ========================================================== */
+
         .connection-status {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+
             padding: 5px 9px;
+
             border-radius: 999px;
+
             font-size: 10px;
             font-weight: 800;
+
             white-space: nowrap;
         }
+
         .connection-status.loading {
             color: #92400e;
             background: #fef3c7;
         }
+
         .connection-status.online {
             color: #166534;
             background: #dcfce7;
         }
+
         .connection-status.offline {
             color: #991b1b;
             background: #fee2e2;
         }
+
         .status-dot {
             width: 7px;
             height: 7px;
             flex-shrink: 0;
+
             border-radius: 50%;
             background: currentColor;
         }
+
         /* =========================================================
            CONTENIDO CON SCROLL
         ========================================================== */
+
         .sidebar-content {
             flex: 1;
             min-height: 0;
+
             overflow-y: auto;
             overflow-x: hidden;
+
             padding: 15px;
         }
+
         .sidebar-content::-webkit-scrollbar {
             width: 7px;
         }
+
         .sidebar-content::-webkit-scrollbar-track {
             background: #f3f4f6;
         }
+
         .sidebar-content::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 20px;
         }
+
         /* =========================================================
            SECCIONES
         ========================================================== */
+
         .section {
             margin-bottom: 18px;
         }
+
         .section-title {
             margin: 0 0 9px;
+
             font-size: 11px;
             font-weight: 800;
+
             text-transform: uppercase;
             letter-spacing: 0.05em;
+
             color: #4b5563;
         }
+
         /* =========================================================
            BOTONES
         ========================================================== */
+
         .button {
             border: none;
             border-radius: 8px;
